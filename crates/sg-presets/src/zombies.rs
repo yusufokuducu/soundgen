@@ -117,7 +117,7 @@ fn growl_low() -> Recipe {
                 pitch_jitter: 0.25,
             },
         )
-        .gain(2.0)
+        .gain(6.0)
         .pan(-0.15)
         .style(1.0, 1.40),
     );
@@ -134,7 +134,7 @@ fn growl_low() -> Recipe {
                 pitch_jitter: 0.60,
             },
         )
-        .gain(-10.0)
+        .gain(4.0)
         .pan(0.25)
         .style(1.0, 1.50),
     );
@@ -149,7 +149,7 @@ fn growl_low() -> Recipe {
                 tame_hz: 5000.0,
             },
         )
-        .gain(-6.0)
+        .gain(0.0)
         .pan(0.12)
         .style(1.0, 1.30),
     )
@@ -266,7 +266,7 @@ fn growl_high() -> Recipe {
                 pitch_jitter: 0.60,
             },
         )
-        .gain(-14.0)
+        .gain(-4.0)
         .pan(0.30)
         .style(1.0, 1.50),
     )
@@ -334,7 +334,7 @@ fn scream() -> Recipe {
                 pitch_jitter: 0.20,
             },
         )
-        .gain(-4.0)
+        .gain(2.0)
         .pan(-0.20)
         .style(1.0, 1.40),
     );
@@ -400,7 +400,7 @@ fn scream() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(-14.0)
+        .gain(-2.0)
         .delay(0.050)
         .style(0.6, 1.70),
     )
@@ -466,7 +466,7 @@ fn pain_hit() -> Recipe {
                 pitch_jitter: 0.35,
             },
         )
-        .gain(-3.0)
+        .gain(3.0)
         .pan(-0.15)
         .style(1.0, 1.40),
     );
@@ -499,7 +499,7 @@ fn pain_hit() -> Recipe {
                 tame_hz: 6000.0,
             },
         )
-        .gain(-8.0)
+        .gain(-2.0)
         .pan(0.15)
         .style(1.0, 1.30),
     );
@@ -516,7 +516,7 @@ fn pain_hit() -> Recipe {
                 pitch_jitter: 0.70,
             },
         )
-        .gain(-14.0)
+        .gain(2.0)
         .pan(0.25)
         .style(1.0, 1.40),
     )
@@ -616,7 +616,7 @@ fn attack_lunge() -> Recipe {
                 pitch_jitter: 0.30,
             },
         )
-        .gain(-5.0)
+        .gain(-1.0)
         .pan(0.10)
         .style(1.0, 1.40),
     );
@@ -680,7 +680,7 @@ fn bite() -> Recipe {
                 tame_hz: 8000.0,
             },
         )
-        .gain(0.0)
+        .gain(6.0)
         .style(1.0, 1.10),
     );
     r = r.layer(
@@ -694,7 +694,7 @@ fn bite() -> Recipe {
                 tame_hz: 6000.0,
             },
         )
-        .gain(-2.0)
+        .gain(2.0)
         .pan(-0.10)
         .style(1.0, 1.20),
     );
@@ -710,7 +710,7 @@ fn bite() -> Recipe {
                 detune_cents: 0.0,
             },
         )
-        .gain(-34.0)
+        .gain(-42.0)
         .pan(0.15)
         .style(1.0, 0.65),
     );
@@ -729,7 +729,7 @@ fn bite() -> Recipe {
                 vibrato: 0.0,
             },
         )
-        .gain(-8.0)
+        .gain(-10.0)
         .style(1.0, 1.30),
     );
     r = r.layer(
@@ -760,7 +760,7 @@ fn bite() -> Recipe {
                 tame_hz: 5000.0,
             },
         )
-        .gain(-10.0)
+        .gain(-4.0)
         .pan(-0.20)
         .style(0.7, 1.50),
     )
@@ -846,7 +846,7 @@ fn death_rattle() -> Recipe {
                 pitch_jitter: 0.50,
             },
         )
-        .gain(-4.0)
+        .gain(2.0)
         .pan(-0.20)
         .style(1.0, 1.50),
     );
@@ -863,7 +863,7 @@ fn death_rattle() -> Recipe {
                 pitch_jitter: 0.80,
             },
         )
-        .gain(-10.0)
+        .gain(0.0)
         .pan(0.25)
         .style(1.0, 1.60),
     );
@@ -878,7 +878,7 @@ fn death_rattle() -> Recipe {
                 tame_hz: 4000.0,
             },
         )
-        .gain(-10.0)
+        .gain(-6.0)
         .pan(0.10)
         .delay(0.900)
         .style(0.8, 1.50),
@@ -996,7 +996,7 @@ fn idle_breath() -> Recipe {
                 vibrato: 0.20,
             },
         )
-        .gain(-28.0)
+        .gain(-31.0)
         .style(1.0, 1.20),
     );
     r = r.layer(
@@ -1028,7 +1028,7 @@ fn idle_breath() -> Recipe {
                 pitch_jitter: 0.70,
             },
         )
-        .gain(-20.0)
+        .gain(-14.0)
         .pan(0.20)
         .delay(1.200)
         .style(1.0, 1.50),
@@ -1137,7 +1137,7 @@ fn horde_bed() -> Recipe {
                 pitch_jitter: 0.40,
             },
         )
-        .gain(-5.0)
+        .gain(1.0)
         .style(1.0, 1.45),
     );
     r = r.layer(
@@ -1151,7 +1151,7 @@ fn horde_bed() -> Recipe {
                 tame_hz: 5000.0,
             },
         )
-        .gain(-10.0)
+        .gain(-4.0)
         .pan(-0.30)
         .delay(0.400)
         .style(1.0, 1.40),

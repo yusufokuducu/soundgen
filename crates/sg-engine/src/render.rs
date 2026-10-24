@@ -204,7 +204,6 @@ fn render_layer(layer: &Layer, rng: &mut Rng, sr: f32, style: f32, out: &mut [f3
             let grain_n = ((gm * 0.001 * sr) as usize).max(2);
             // Research: normalise by 1/sqrt(overlap) so density changes keep level.
             let norm = 1.0 / (density * gm * 0.001).max(1.0).sqrt();
-            let interval = (sr / density.max(0.5)).max(1.0);
             let mut next_grain = 0.0f32;
             let mut grains: Vec<Grain> = Vec::new();
             let mut nz = NoiseGen::new(*color);
@@ -225,9 +224,14 @@ fn render_layer(layer: &Layer, rng: &mut Rng, sr: f32, style: f32, out: &mut [f3
                         len,
                         filter: f,
                         nz: NoiseGen::new(*color),
-                        amp: rng.range(0.5, 1.0),
+                        amp: rng.range(0.2, 1.0).powf(1.5),
                     });
-                    next_grain += interval * (1.0 + rng.normal() * spray * 0.5).max(0.15);
+                    // Poisson process: exponential inter-arrival keeps the cloud
+                    // irregular instead of metronomic (research: constant density
+                    // reads as a "shaker", not as paper/rasp).
+                    let mean_interval = sr / density.max(0.5);
+                    let u = rng.next_f32().max(1e-6);
+                    next_grain += -u.ln() * mean_interval;
                 }
                 let mut s = 0.0f32;
                 for g in grains.iter_mut() {
@@ -400,9 +404,15 @@ fn master_chain(recipe: &Recipe, sr: f32, left: &mut [f32], right: &mut [f32]) {
     }
 
     let mut lim = Limiter::new(sr, m.ceiling_db);
+    // The reverb and the wide-band layers can leave a DC offset behind the
+    // first DC blocker; strip it again before limiting.
+    let mut dc2_l = DcBlocker::default();
+    let mut dc2_r = DcBlocker::default();
     let mut peak = 0.0f32;
     for i in 0..left.len() {
-        let (l, r) = lim.process_stereo(left[i], right[i]);
+        let l = dc2_l.process(left[i]);
+        let r = dc2_r.process(right[i]);
+        let (l, r) = lim.process_stereo(l, r);
         left[i] = l;
         right[i] = r;
         peak = peak.max(l.abs()).max(r.abs());
@@ -416,4 +426,5 @@ fn master_chain(recipe: &Recipe, sr: f32, left: &mut [f32], right: &mut [f32]) {
         }
     }
 }
+
 

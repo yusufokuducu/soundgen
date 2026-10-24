@@ -69,6 +69,7 @@ pub fn presets() -> Vec<Recipe> {
 fn footstep_concrete() -> Recipe {
     let mut r = base("foley_footstep_concrete", "Footstep Concrete", Category::Foley);
     r.duration = 0.26;
+    r.fade_in = 0.0;
     r.fade_out = 0.02;
     r.style = 0.2;
     r.tags = vec!["footstep".into(), "concrete".into(), "walk".into()];
@@ -138,7 +139,7 @@ fn footstep_concrete() -> Recipe {
                 pitch_jitter: 0.3,
             },
         )
-        .gain(-14.0)
+        .gain(-6.0)
         .pan(0.15)
         .style(0.7, 1.5),
     )
@@ -148,6 +149,7 @@ fn footstep_concrete() -> Recipe {
 fn footstep_grass() -> Recipe {
     let mut r = base("foley_footstep_grass", "Footstep Grass", Category::Foley);
     r.duration = 0.24;
+    r.fade_in = 0.0;
     r.fade_out = 0.02;
     r.style = 0.2;
     r.tags = vec!["footstep".into(), "grass".into(), "soft".into()];
@@ -231,6 +233,7 @@ fn footstep_grass() -> Recipe {
 fn footstep_mud() -> Recipe {
     let mut r = base("foley_footstep_mud", "Footstep Mud", Category::Foley);
     r.duration = 0.26;
+    r.fade_in = 0.0;
     r.fade_out = 0.02;
     r.style = 0.3;
     r.tags = vec!["footstep".into(), "mud".into(), "wet".into()];
@@ -313,6 +316,7 @@ fn footstep_mud() -> Recipe {
 fn footstep_metal() -> Recipe {
     let mut r = base("foley_footstep_metal", "Footstep Metal", Category::Foley);
     r.duration = 0.32;
+    r.fade_in = 0.0;
     r.fade_out = 0.02;
     r.style = 0.22;
     r.tags = vec!["footstep".into(), "metal".into(), "grate".into()];
@@ -386,7 +390,7 @@ fn footstep_metal() -> Recipe {
                 vibrato: 0.0,
             },
         )
-        .gain(-14.0)
+        .gain(-10.0)
         .pan(-0.18)
         .style(0.8, 1.5),
     )
@@ -396,6 +400,7 @@ fn footstep_metal() -> Recipe {
 fn body_land() -> Recipe {
     let mut r = base("foley_body_land", "Body Land", Category::Foley);
     r.duration = 0.78;
+    r.fade_in = 0.0;
     r.fade_out = 0.04;
     r.style = 0.3;
     r.tags = vec!["body".into(), "land".into(), "gear".into()];
@@ -474,7 +479,7 @@ fn body_land() -> Recipe {
                 detune_cents: 0.0,
             },
         )
-        .gain(-26.0)
+        .gain(-20.0)
         .pan(-0.35)
         .delay(0.115)
         .style(0.7, 1.6),
@@ -490,7 +495,7 @@ fn body_land() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(-2.0)
+        .gain(4.0)
         .pan(-0.2)
         .style(0.8, 1.5),
     )
@@ -500,6 +505,7 @@ fn body_land() -> Recipe {
 fn cloth_rustle() -> Recipe {
     let mut r = base("foley_cloth_rustle", "Cloth Rustle", Category::Foley);
     r.duration = 0.42;
+    r.fade_in = 0.0;
     r.fade_out = 0.025;
     r.style = 0.3;
     r.tags = vec!["cloth".into(), "rustle".into(), "movement".into()];
@@ -583,8 +589,8 @@ fn cloth_rustle() -> Recipe {
 fn door_creak() -> Recipe {
     let mut r = base("foley_door_creak", "Door Creak", Category::Foley);
     r.duration = 2.1;
+    r.fade_in = 0.0;
     r.fade_out = 0.08;
-    r.fade_in = 0.01;
     r.style = 0.35;
     r.tags = vec!["door".into(), "creak".into(), "wood".into(), "long".into()];
     r.description = "Long wooden door creak: a slowly drifting saw hinge, box resonances and dry grit.".into();
@@ -642,15 +648,16 @@ fn door_creak() -> Recipe {
         Layer::new(
             "frame modes",
             LayerKind::Modal {
-                modes: struck(215.0, &WOOD, 0.9, 0x0F05_0001),
-                exciter_ms: 6.0,
+                modes: struck(215.0, &WOOD, 0.3, 0x0F05_0001),
+                exciter_ms: 3.0,
                 exciter_color: NoiseColor::Pink,
                 exciter_hp: 80.0,
                 exciter_lp: 2800.0,
                 detune_cents: 0.0,
             },
         )
-        .gain(-38.0)
+        .gain(-56.0)
+        .delay(0.02)
         .style(1.0, 1.4),
     );
     r = r.layer(
@@ -691,6 +698,7 @@ fn door_creak() -> Recipe {
 fn debris_glass() -> Recipe {
     let mut r = base("foley_debris_glass", "Debris Glass", Category::Foley);
     r.duration = 0.62;
+    r.fade_in = 0.0;
     r.fade_out = 0.03;
     r.style = 0.35;
     r.tags = vec!["glass".into(), "debris".into(), "break".into(), "shards".into()];

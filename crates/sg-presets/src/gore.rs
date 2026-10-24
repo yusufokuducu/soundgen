@@ -66,6 +66,7 @@ pub fn presets() -> Vec<Recipe> {
 fn flesh_hit() -> Recipe {
     let mut r = base("gore_flesh_hit", "Flesh Hit", Category::Gore);
     r.duration = 0.34;
+    r.fade_in = 0.0;
     r.fade_out = 0.025;
     r.style = 0.3;
     r.tags = vec!["flesh".into(), "impact".into(), "wet".into()];
@@ -159,6 +160,7 @@ fn flesh_hit() -> Recipe {
 fn flesh_slash() -> Recipe {
     let mut r = base("gore_flesh_slash", "Flesh Slash", Category::Gore);
     r.duration = 0.28;
+    r.fade_in = 0.0;
     r.fade_out = 0.02;
     r.style = 0.28;
     r.tags = vec!["flesh".into(), "slash".into(), "blade".into()];
@@ -212,7 +214,7 @@ fn flesh_slash() -> Recipe {
                 pitch_jitter: 0.35,
             },
         )
-        .gain(-6.0)
+        .gain(0.0)
         .pan(0.2)
         .style(0.9, 1.6),
     );
@@ -255,6 +257,7 @@ fn flesh_slash() -> Recipe {
 fn bone_break() -> Recipe {
     let mut r = base("gore_bone_break", "Bone Break", Category::Gore);
     r.duration = 0.3;
+    r.fade_in = 0.0;
     r.fade_out = 0.02;
     r.style = 0.35;
     r.tags = vec!["bone".into(), "crack".into(), "snap".into()];
@@ -279,7 +282,7 @@ fn bone_break() -> Recipe {
                 tame_hz: 15_000.0,
             },
         )
-        .gain(1.0)
+        .gain(-2.0)
         .style(1.0, 0.8),
     );
     r = r.layer(
@@ -294,7 +297,7 @@ fn bone_break() -> Recipe {
                 detune_cents: 0.0,
             },
         )
-        .gain(-14.0)
+        .gain(-12.0)
         .style(1.0, 1.3),
     );
     r = r.layer(
@@ -308,7 +311,7 @@ fn bone_break() -> Recipe {
                 tame_hz: 14_000.0,
             },
         )
-        .gain(-10.0)
+        .gain(-7.0)
         .pan(0.12)
         .style(0.9, 1.3),
     );
@@ -352,6 +355,7 @@ fn bone_break() -> Recipe {
 fn head_pop() -> Recipe {
     let mut r = base("gore_head_pop", "Head Pop", Category::Gore);
     r.duration = 0.46;
+    r.fade_in = 0.0;
     r.fade_out = 0.03;
     r.style = 0.55;
     r.tags = vec!["skull".into(), "explode".into(), "wet".into()];
@@ -412,7 +416,7 @@ fn head_pop() -> Recipe {
                 pitch_jitter: 0.4,
             },
         )
-        .gain(-1.0)
+        .gain(5.0)
         .pan(0.12)
         .style(0.9, 1.7),
     );
@@ -444,7 +448,7 @@ fn head_pop() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(-16.0)
+        .gain(-8.0)
         .pan(0.3)
         .style(0.6, 1.8),
     )
@@ -454,6 +458,7 @@ fn head_pop() -> Recipe {
 fn body_fall() -> Recipe {
     let mut r = base("gore_body_fall", "Body Fall", Category::Gore);
     r.duration = 0.6;
+    r.fade_in = 0.0;
     r.fade_out = 0.04;
     r.style = 0.32;
     r.tags = vec!["body".into(), "fall".into(), "heavy".into()];
@@ -560,6 +565,7 @@ fn body_fall() -> Recipe {
 fn blood_splat() -> Recipe {
     let mut r = base("gore_blood_splat", "Blood Splat", Category::Gore);
     r.duration = 0.55;
+    r.fade_in = 0.0;
     r.fade_out = 0.03;
     r.style = 0.45;
     r.tags = vec!["blood".into(), "splat".into(), "wet".into()];
@@ -584,7 +590,7 @@ fn blood_splat() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(2.0)
+        .gain(6.0)
         .style(1.0, 1.1),
     );
     r = r.layer(
@@ -637,7 +643,7 @@ fn blood_splat() -> Recipe {
                 vibrato: 0.0,
             },
         )
-        .gain(-11.0)
+        .gain(-15.0)
         .style(1.0, 1.5),
     )
 }
@@ -646,6 +652,7 @@ fn blood_splat() -> Recipe {
 fn dismember() -> Recipe {
     let mut r = base("gore_dismember", "Dismember", Category::Gore);
     r.duration = 0.52;
+    r.fade_in = 0.0;
     r.fade_out = 0.035;
     r.style = 0.4;
     r.tags = vec!["tear".into(), "limb".into(), "gore".into()];
@@ -746,6 +753,7 @@ fn dismember() -> Recipe {
 fn zombie_crunch() -> Recipe {
     let mut r = base("gore_zombie_crunch", "Zombie Crunch", Category::Gore);
     r.duration = 0.44;
+    r.fade_in = 0.0;
     r.fade_out = 0.03;
     r.style = 0.5;
     r.tags = vec!["zombie".into(), "crunch".into(), "bite".into()];
@@ -822,7 +830,7 @@ fn zombie_crunch() -> Recipe {
                 pitch_jitter: 0.3,
             },
         )
-        .gain(-3.0)
+        .gain(3.0)
         .pan(-0.08)
         .style(0.9, 1.6),
     );
@@ -855,7 +863,18 @@ mod tests {
         for r in presets().into_iter().chain(crate::foley::presets()) {
             let full = sg_engine::render(&r, 42);
             let full_rms = full.rms().max(1e-9);
-            println!("== {}", r.id);
+            let (pi, _) = full
+                .samples
+                .iter()
+                .enumerate()
+                .max_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap())
+                .unwrap();
+            println!("== {} peak at {:.4}s ({:.2} dB)", r.id, pi as f32 / 2.0 / 48_000.0, sg_dsp::gain_to_db(full.peak()));
+            let tail_start = full.frames().saturating_sub((0.12 * 48_000.0) as usize);
+            let tail_peak = full.samples[tail_start * 2..]
+                .iter()
+                .fold(0.0f32, |m, s| m.max(s.abs()));
+            println!("   tail peak {:.2} dB  fade_out {:.3} fade_in {:.4}", sg_dsp::gain_to_db(tail_peak), r.fade_out, r.fade_in);
             for (i, l) in r.layers.iter().enumerate() {
                 let mut partial = r.clone();
                 partial.layers[i].mute = true;

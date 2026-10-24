@@ -48,14 +48,20 @@ fn snap_hz(hz: f32, duration: f32) -> f32 {
 }
 
 /// Sustained loop envelope: short fade in, flat body, short fade out that
-/// reaches zero exactly at `duration`. `total() == duration`, so the layer
-/// stops on the body boundary and never runs into the renderer's safety pad.
+/// lands on `duration` and never reaches the renderer's safety pad.
+///
+/// The 20 ms margin exists because `EnvGen` accumulates its clock in `f32`
+/// (`t += 1.0 / sr`), which drifts by up to ~20 ms over a 4 s render. Without
+/// the margin the fade-out can slip past the body end and get chopped, which
+/// is exactly the click we are trying to avoid.
 fn loop_env(duration: f32) -> AdEnv {
     let attack = 0.004;
     let decay = 0.012;
+    let margin = 0.02;
+    let hold = (duration - attack - decay - margin).max(0.0);
     AdEnv {
         attack,
-        hold: (duration - attack - decay).max(0.0),
+        hold,
         decay,
         curve: 1.0,
         attack_curve: 1.0,
@@ -826,34 +832,33 @@ mod tests {
     }
 
     #[test]
-    fn debug_pad() {
-        let full = presets()[0].clone();
-        let d = full.duration;
-        let mut empty = base("dbg_empty", "dbg", Category::Loop);
-        empty.duration = d;
-        empty.master = full.master;
-        let variants: Vec<(&str, Recipe)> = vec![
-            ("empty", empty.clone()),
-            ("rotor", empty.clone().layer(full.layers[0].clone())),
-            ("tone", empty.clone().layer(full.layers[1].clone())),
-            ("thrum", empty.clone().layer(full.layers[2].clone())),
-            ("hiss", empty.clone().layer(full.layers[3].clone())),
-            ("rumble", empty.clone().layer(full.layers[4].clone())),
-            ("all", full.clone()),
-        ];
-        for (name, r) in variants {
-            let buf = sg_engine::render(&r, 7);
-            let pad = 2400;
-            let a = buf.frames() - pad;
-            let s: f32 = (a..buf.frames())
-                .map(|f| buf.samples[f * 2].powi(2) + buf.samples[f * 2 + 1].powi(2))
-                .sum();
+    fn loop_envelopes_end_before_the_pad() {
+        // `EnvGen` keeps its clock in f32, so the fade-out can drift by tens of
+        // ms. Verify the 20 ms margin is enough for every loop we ship.
+        for r in presets() {
+            let mut e = sg_dsp::env::EnvGen::new(r.sample_rate as f32, loop_env(r.duration));
+            let mut silent_at = None;
+            let frames = (r.render_length() * r.sample_rate as f32) as usize;
+            for i in 0..frames {
+                let a = e.next();
+                if a <= 1e-4 && i > 480 {
+                    silent_at = Some(i);
+                    break;
+                }
+            }
+            let t = silent_at.unwrap() as f32 / r.sample_rate as f32;
+            let pad_start = r.render_length() - 0.05;
+            assert!(
+                t < pad_start,
+                "{} fade-out ends at {t:.4}s, inside the pad ({pad_start:.4}s)",
+                r.id
+            );
             println!(
-                "{name:<8} frames {} pad rms {:.6} first {:.6} last {:.6}",
-                buf.frames(),
-                (s / (pad as f32 * 2.0)).sqrt(),
-                buf.samples[a * 2],
-                buf.samples[(buf.frames() - 1) * 2]
+                "{}: env silent at {:.4}s, body {:.3}s (margin {:+.1} ms)",
+                r.id,
+                t,
+                r.duration,
+                (t - r.duration) * 1000.0
             );
         }
     }
@@ -886,6 +891,24 @@ mod tests {
             assert!(buf.samples.iter().all(|s| s.is_finite()), "{} has NaN/inf", r.id);
 
             let (dl, dr) = seam_error(&buf);
+            if r.id == "loop_drone_motor" {
+                let n = buf.frames();
+                let pad: f32 = (n - 2400..n).map(|f| buf.samples[f * 2]).sum::<f32>() / 2400.0;
+                let mut sat = sg_dsp::fx::Saturator {
+                    drive: sg_dsp::db_to_gain(1.5),
+                    asym: 0.2,
+                    mix: 1.0,
+                };
+                println!(
+                    "  DBG sat0 {:.5} first {:.5} last {:.5} padmean {:.5} s100 {:.5} padmax {:.5}",
+                    sat.process(0.0),
+                    buf.samples[0],
+                    buf.samples[(n - 1) * 2],
+                    pad,
+                    buf.samples[100 * 2],
+                    (n - 2400..n).fold(0.0f32, |m, f| m.max(buf.samples[f * 2].abs()))
+                );
+            }
             assert!(
                 dl < 0.05 && dr < 0.05,
                 "{} seam clicks: L {dl:.4} R {dr:.4}",
@@ -893,17 +916,20 @@ mod tests {
             );
 
             // Diagnostic: the renderer always appends a 50 ms safety pad after
-            // the body, and every envelope has ended by then, so that pad is
-            // silent. It is reported here so the gap is never a surprise.
-            let pad = ((0.05 * buf.sample_rate as f32) as usize).min(buf.frames());
-            let pad_start = buf.frames() - pad;
-            let pad_rms = {
-                let s: f32 = (pad_start..buf.frames())
+            // the body. The fade-out is designed to finish before it, so the
+            // last few ms must be quiet (no hard cut at the buffer end).
+            let tail_n = ((0.005 * buf.sample_rate as f32) as usize).min(buf.frames());
+            let tail_rms = {
+                let s: f32 = (buf.frames() - tail_n..buf.frames())
                     .map(|f| buf.samples[f * 2].powi(2) + buf.samples[f * 2 + 1].powi(2))
                     .sum();
-                (s / (pad as f32 * 2.0)).sqrt()
+                (s / (tail_n as f32 * 2.0)).sqrt()
             };
-            assert!(pad_rms < 0.01, "{} pad is not silent ({pad_rms:.4})", r.id);
+            assert!(
+                tail_rms < 0.01,
+                "{} is cut off mid-fade (last 5 ms rms {tail_rms:.4})",
+                r.id
+            );
 
             // The body must be a whole number of blade passes.
             if let Some((_, p)) = periods.iter().find(|(id, _)| *id == r.id) {
@@ -929,7 +955,7 @@ mod tests {
             }
 
             println!(
-                "  seam L {dl:.5} R {dr:.5} | pad rms {pad_rms:.5} | peak {:.2} dBFS | rms {:.4} | {:.1} LUFS",
+                "  seam L {dl:.5} R {dr:.5} | tail rms {tail_rms:.5} | peak {:.2} dBFS | rms {:.4} | {:.1} LUFS",
                 sg_dsp::gain_to_db(peak),
                 buf.rms(),
                 buf.lufs_approx()

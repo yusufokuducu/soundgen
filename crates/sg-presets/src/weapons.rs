@@ -78,6 +78,7 @@ fn pistol_fire() -> Recipe {
     r.duration = 0.40;
     r.fade_out = 0.03;
     r.style = 0.30;
+    r.fade_in = 0.0;
     r.tags = vec![
         "gun".into(),
         "pistol".into(),
@@ -145,7 +146,7 @@ fn pistol_fire() -> Recipe {
                 tame_hz: 900.0,
             },
         )
-        .gain(-7.0)
+        .gain(-3.0)
         .style(1.0, 1.20),
     );
     r = r.layer(
@@ -176,7 +177,7 @@ fn pistol_fire() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(-10.0)
+        .gain(-4.0)
         .pan(-0.08)
         .delay(0.012)
         .style(0.7, 1.60),
@@ -188,6 +189,7 @@ fn rifle_fire() -> Recipe {
     r.duration = 0.72;
     r.fade_out = 0.04;
     r.style = 0.28;
+    r.fade_in = 0.0;
     r.tags = vec![
         "gun".into(),
         "rifle".into(),
@@ -270,7 +272,7 @@ fn rifle_fire() -> Recipe {
                 tame_hz: 4000.0,
             },
         )
-        .gain(-3.0)
+        .gain(3.0)
         .style(1.0, 1.30),
     );
     r = r.layer(
@@ -284,7 +286,7 @@ fn rifle_fire() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(-8.0)
+        .gain(0.0)
         .delay(0.020)
         .style(0.7, 1.70),
     );
@@ -312,6 +314,7 @@ fn shotgun_fire() -> Recipe {
     r.duration = 0.95;
     r.fade_out = 0.05;
     r.style = 0.35;
+    r.fade_in = 0.0;
     r.tags = vec![
         "gun".into(),
         "shotgun".into(),
@@ -413,7 +416,7 @@ fn shotgun_fire() -> Recipe {
                 pitch_jitter: 0.30,
             },
         )
-        .gain(-9.0)
+        .gain(-2.0)
         .pan(-0.25)
         .delay(0.030)
         .style(0.6, 1.50),
@@ -429,7 +432,7 @@ fn shotgun_fire() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(-7.0)
+        .gain(1.0)
         .pan(0.10)
         .delay(0.020)
         .style(0.7, 1.60),
@@ -441,6 +444,7 @@ fn smg_fire() -> Recipe {
     r.duration = 0.28;
     r.fade_out = 0.025;
     r.style = 0.30;
+    r.fade_in = 0.0;
     r.tags = vec![
         "gun".into(),
         "smg".into(),
@@ -538,7 +542,7 @@ fn smg_fire() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(-13.0)
+        .gain(-7.0)
         .pan(-0.12)
         .delay(0.010)
         .style(0.6, 1.40),
@@ -550,6 +554,7 @@ fn suppressed_fire() -> Recipe {
     r.duration = 0.42;
     r.fade_out = 0.035;
     r.style = 0.35;
+    r.fade_in = 0.0;
     r.tags = vec![
         "gun".into(),
         "suppressed".into(),
@@ -585,7 +590,7 @@ fn suppressed_fire() -> Recipe {
                 tame_hz: 6000.0,
             },
         )
-        .gain(-2.0)
+        .gain(4.0)
         .style(1.0, 1.30),
     );
     r = r.layer(
@@ -618,7 +623,7 @@ fn suppressed_fire() -> Recipe {
                 detune_cents: 0.0,
             },
         )
-        .gain(-19.0)
+        .gain(-21.0)
         .pan(0.18)
         .delay(0.003)
         .style(1.0, 0.60),
@@ -634,7 +639,7 @@ fn suppressed_fire() -> Recipe {
                 tame_hz: 3000.0,
             },
         )
-        .gain(-6.0)
+        .gain(2.0)
         .pan(-0.10)
         .delay(0.008)
         .style(0.7, 1.50),
@@ -650,7 +655,7 @@ fn suppressed_fire() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(-14.0)
+        .gain(-6.0)
         .delay(0.020)
         .style(0.7, 1.50),
     )
@@ -665,6 +670,7 @@ fn dry_fire() -> Recipe {
     r.duration = 0.16;
     r.fade_out = 0.02;
     r.style = 0.40;
+    r.fade_in = 0.0;
     r.tags = vec![
         "gun".into(),
         "click".into(),
@@ -728,7 +734,7 @@ fn dry_fire() -> Recipe {
                 detune_cents: 0.0,
             },
         )
-        .gain(-28.0)
+        .gain(-32.0)
         .pan(-0.10)
         .style(1.0, 0.60),
     );
@@ -743,7 +749,7 @@ fn dry_fire() -> Recipe {
                 tame_hz: 8000.0,
             },
         )
-        .gain(0.0)
+        .gain(2.0)
         .delay(0.004)
         .style(1.0, 0.60),
     );
@@ -759,7 +765,7 @@ fn dry_fire() -> Recipe {
                 detune_cents: 0.0,
             },
         )
-        .gain(-28.0)
+        .gain(-34.0)
         .pan(0.20)
         .delay(0.010)
         .style(1.0, 0.40),
@@ -771,6 +777,7 @@ fn reload_mag() -> Recipe {
     r.duration = 0.62;
     r.fade_out = 0.03;
     r.style = 0.35;
+    r.fade_in = 0.0;
     r.tags = vec![
         "gun".into(),
         "reload".into(),
@@ -901,6 +908,7 @@ fn casing_drop() -> Recipe {
     r.duration = 0.70;
     r.fade_out = 0.04;
     r.style = 0.40;
+    r.fade_in = 0.0;
     r.tags = vec![
         "gun".into(),
         "brass".into(),
@@ -1028,6 +1036,7 @@ fn bolt_pull() -> Recipe {
     r.duration = 0.60;
     r.fade_out = 0.03;
     r.style = 0.35;
+    r.fade_in = 0.0;
     r.tags = vec![
         "gun".into(),
         "bolt".into(),
@@ -1078,7 +1087,7 @@ fn bolt_pull() -> Recipe {
                 tame_hz: 10_000.0,
             },
         )
-        .gain(-6.0)
+        .gain(-2.0)
         .pan(-0.20)
         .delay(0.020)
         .style(0.7, 1.40),
@@ -1111,7 +1120,7 @@ fn bolt_pull() -> Recipe {
                 tame_hz: 10_000.0,
             },
         )
-        .gain(-8.0)
+        .gain(-4.0)
         .pan(0.20)
         .delay(0.280)
         .style(0.7, 1.40),
@@ -1157,6 +1166,7 @@ fn shell_insert() -> Recipe {
     r.duration = 0.55;
     r.fade_out = 0.03;
     r.style = 0.35;
+    r.fade_in = 0.0;
     r.tags = vec![
         "gun".into(),
         "shotgun".into(),
@@ -1192,7 +1202,7 @@ fn shell_insert() -> Recipe {
                 tame_hz: 7000.0,
             },
         )
-        .gain(-12.0)
+        .gain(-6.0)
         .pan(-0.10)
         .style(0.8, 1.30),
     );
@@ -1226,7 +1236,7 @@ fn shell_insert() -> Recipe {
                 detune_cents: 0.0,
             },
         )
-        .gain(-19.0)
+        .gain(-22.0)
         .pan(0.15)
         .style(1.0, 0.65),
     );
@@ -1277,7 +1287,7 @@ fn shell_insert() -> Recipe {
                 detune_cents: 0.0,
             },
         )
-        .gain(-20.0)
+        .gain(-23.0)
         .pan(-0.15)
         .delay(0.280)
         .style(1.0, 0.65),
@@ -1287,33 +1297,6 @@ fn shell_insert() -> Recipe {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn calibrate_layers() {
-        for r in presets().iter().chain(crate::zombies::presets().iter()) {
-            let full = sg_engine::render(r, 42);
-            println!("== {}  peak {:.2} dB", r.id, sg_dsp::gain_to_db(full.peak()));
-            for i in 0..r.layers.len() {
-                let mut m = r.clone();
-                m.layers[i].mute = true;
-                let muted = sg_engine::render(&m, 42);
-                let mut sum = 0.0f64;
-                let mut pk = 0.0f32;
-                for k in 0..full.samples.len().min(muted.samples.len()) {
-                    let d = full.samples[k] - muted.samples[k];
-                    sum += (d * d) as f64;
-                    pk = pk.max(d.abs());
-                }
-                let rms = (sum / full.samples.len() as f64).sqrt() as f32;
-                println!(
-                    "   {:<16} peak {:6.1} dB  rms {:6.1} dB",
-                    r.layers[i].name,
-                    sg_dsp::gain_to_db(pk.max(1e-9)),
-                    sg_dsp::gain_to_db(rms.max(1e-9))
-                );
-            }
-        }
-    }
 
     #[test]
     fn weapon_presets_render_cleanly() {
