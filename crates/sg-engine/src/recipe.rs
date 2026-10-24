@@ -59,6 +59,8 @@ pub struct Recipe {
     pub master: MasterChain,
     /// 0.0 = realistic, 1.0 = cartoon/stylised.
     pub style: f32,
+    /// Loops only: circular crossfade length in seconds (0 = hard splice).
+    pub loop_crossfade: f32,
     pub sample_rate: u32,
 }
 
@@ -77,6 +79,7 @@ impl Recipe {
             looped: false,
             master: MasterChain::default(),
             style: 0.35,
+            loop_crossfade: 0.0,
             sample_rate: 48_000,
         }
     }
@@ -97,7 +100,12 @@ impl Recipe {
     }
 
     /// How long the render must be to hold every layer plus its tail.
+    /// Loops must be exactly `duration` (a tail pad would open a silent gap at
+    /// the seam), one-shots get 50 ms of safety.
     pub fn render_length(&self) -> f32 {
+        if self.looped {
+            return self.duration.clamp(0.01, 30.0);
+        }
         let tail = self
             .layers
             .iter()

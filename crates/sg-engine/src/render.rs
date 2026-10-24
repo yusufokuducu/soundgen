@@ -21,7 +21,14 @@ pub fn render(recipe: &Recipe, seed: u64) -> AudioBuffer {
 
 pub fn render_with_style(recipe: &Recipe, seed: u64, style: f32) -> AudioBuffer {
     let sr = recipe.sample_rate as f32;
-    let frames = (recipe.render_length() * sr).ceil() as usize;
+    let loop_frames_base = (recipe.render_length() * sr).ceil() as usize;
+    let xfade_secs = if recipe.looped {
+        recipe.loop_crossfade.clamp(0.0, 0.5)
+    } else {
+        0.0
+    };
+    let xfade_frames = (xfade_secs * sr) as usize;
+    let frames = loop_frames_base + xfade_frames;
     let mut left = vec![0.0f32; frames];
     let mut right = vec![0.0f32; frames];
     let any_solo = recipe.layers.iter().any(|l| l.solo);
@@ -44,19 +51,43 @@ pub fn render_with_style(recipe: &Recipe, seed: u64, style: f32) -> AudioBuffer 
         }
     }
 
+    // Fade-in must happen BEFORE normalisation, otherwise a 1 ms ramp eats the
+    // first milliseconds of a transient (a gunshot crack lives there).
+    if recipe.fade_in > 0.0 {
+        let n = ((recipe.fade_in * sr) as usize).min(left.len());
+        for i in 0..n {
+            let g = i as f32 / n as f32;
+            left[i] *= g;
+            right[i] *= g;
+        }
+    }
+
     master_chain(recipe, sr, &mut left, &mut right);
 
-    let mut out = AudioBuffer::new(recipe.sample_rate, frames);
-    for i in 0..frames {
+    // Circular crossfade AFTER the stateful chain: the limiter gain at the head
+    // differs from the tail, so folding earlier would put a step at the seam.
+    let mut out_frames = frames;
+    if xfade_frames > 0 && loop_frames_base > xfade_frames {
+        for i in 0..xfade_frames {
+            let w = i as f32 / xfade_frames as f32;
+            let tail = loop_frames_base + i;
+            left[i] = left[i] * w + left[tail] * (1.0 - w);
+            right[i] = right[i] * w + right[tail] * (1.0 - w);
+        }
+        out_frames = loop_frames_base;
+        left.truncate(out_frames);
+        right.truncate(out_frames);
+    }
+
+    let mut out = AudioBuffer::new(recipe.sample_rate, out_frames);
+    for i in 0..out_frames {
         out.samples[i * 2] = left[i];
         out.samples[i * 2 + 1] = right[i];
-    }
-    if recipe.fade_in > 0.0 {
-        out.fade_in(recipe.fade_in * 1000.0);
     }
     if recipe.fade_out > 0.0 {
         out.fade_out(recipe.fade_out * 1000.0);
     }
+    out.normalize_peak(recipe.master.target_peak_db);
     out
 }
 
@@ -263,6 +294,7 @@ fn render_layer(layer: &Layer, rng: &mut Rng, sr: f32, style: f32, out: &mut [f3
             let mut air_lp = Svf::new(sr);
             air_lp.set(2500.0, 0.707);
             let mut motor = Osc::new(sr);
+            let mut motor2 = Osc::new(sr);
             let mut i = 0usize;
             while i < out.len() {
                 let t = i as f32 / sr;
@@ -276,7 +308,7 @@ fn render_layer(layer: &Layer, rng: &mut Rng, sr: f32, style: f32, out: &mut [f3
                 let body = nz.next(rng) * am * 0.5;
                 let hiss = air_lp.process(air_nz.next(rng), SvfMode::LowPass) * air;
                 let hum = motor.next(tone_hz.max(20.0), WaveShape::Saw) * 0.18
-                    + motor.next(tone_hz.max(20.0) * 2.0, WaveShape::Sine) * 0.08;
+                    + motor2.next(tone_hz.max(20.0) * 2.0, WaveShape::Sine) * 0.08;
                 out[i] += (body + hiss + hum) * amp;
                 i += 1;
             }
@@ -408,23 +440,15 @@ fn master_chain(recipe: &Recipe, sr: f32, left: &mut [f32], right: &mut [f32]) {
     // first DC blocker; strip it again before limiting.
     let mut dc2_l = DcBlocker::default();
     let mut dc2_r = DcBlocker::default();
-    let mut peak = 0.0f32;
     for i in 0..left.len() {
         let l = dc2_l.process(left[i]);
         let r = dc2_r.process(right[i]);
         let (l, r) = lim.process_stereo(l, r);
         left[i] = l;
         right[i] = r;
-        peak = peak.max(l.abs()).max(r.abs());
     }
-    let target = db_to_gain(m.target_peak_db);
-    if peak > 1e-6 {
-        let g = target / peak;
-        for i in 0..left.len() {
-            left[i] *= g;
-            right[i] *= g;
-        }
-    }
+    // Peak normalisation is applied by the caller, after the loop crossfade,
+    // so that stateful processing cannot put a step at the loop seam.
 }
 
 

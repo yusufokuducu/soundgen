@@ -70,36 +70,38 @@ impl AdEnv {
 }
 
 /// Stateful sample-accurate envelope follower.
+/// The clock is a sample counter (not an accumulating f32), so long renders do
+/// not drift — a 4 s loop must end on the same sample it started.
 #[derive(Clone, Debug)]
 pub struct EnvGen {
     sr: f32,
-    t: f32,
+    n: u64,
     pub env: AdEnv,
 }
 
 impl EnvGen {
     pub fn new(sr: f32, env: AdEnv) -> Self {
-        Self { sr, t: 0.0, env }
+        Self { sr, n: 0, env }
     }
 
     pub fn reset(&mut self) {
-        self.t = 0.0;
+        self.n = 0;
     }
 
     #[inline]
     pub fn next(&mut self) -> f32 {
-        let v = self.env.value_at(self.t);
-        self.t += 1.0 / self.sr;
+        let v = self.env.value_at(self.n as f32 / self.sr);
+        self.n += 1;
         v
     }
 
     #[inline]
     pub fn time(&self) -> f32 {
-        self.t
+        self.n as f32 / self.sr
     }
 
     pub fn finished(&self) -> bool {
-        self.t > self.env.total()
+        self.time() > self.env.total()
     }
 }
 

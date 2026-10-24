@@ -2,6 +2,7 @@
 **/*.rs.bk
 *.pdb
 /out
+/tmp
 /dist
 /.idea
 .vscode/

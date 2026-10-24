@@ -67,7 +67,7 @@ fn metal_modes(base: f32, decay: f32) -> Vec<Mode> {
 
 fn wood_creak() -> Recipe {
     let mut r = base("crate_wood_creak", "Wood Creak", Category::Crate);
-    r.duration = 1.5;
+    r.duration = 1.35;
     r.fade_out = 0.06;
     r.style = 0.3;
     r.tags = vec!["crate".into(), "wood".into(), "creak".into(), "open".into()];
@@ -180,7 +180,7 @@ fn wood_creak() -> Recipe {
 
 fn open_pop() -> Recipe {
     let mut r = base("crate_open_pop", "Crate Open Pop", Category::Crate);
-    r.duration = 0.8;
+    r.duration = 0.55;
     r.fade_out = 0.05;
     r.style = 0.35;
     r.tags = vec!["crate".into(), "wood".into(), "open".into(), "latch".into()];
@@ -285,7 +285,7 @@ fn open_pop() -> Recipe {
 
 fn shatter() -> Recipe {
     let mut r = base("crate_shatter", "Crate Shatter", Category::Crate);
-    r.duration = 1.3;
+    r.duration = 1.1;
     r.fade_out = 0.08;
     r.style = 0.4;
     r.tags = vec!["crate".into(), "wood".into(), "shatter".into(), "destroy".into()];
@@ -391,7 +391,7 @@ fn shatter() -> Recipe {
 
 fn lock_click() -> Recipe {
     let mut r = base("crate_lock_click", "Lock Click", Category::Crate);
-    r.duration = 0.22;
+    r.duration = 0.15;
     r.fade_out = 0.02;
     r.style = 0.25;
     r.tags = vec!["crate".into(), "metal".into(), "lock".into(), "click".into()];
@@ -495,7 +495,7 @@ fn lock_click() -> Recipe {
 
 fn reward_reveal() -> Recipe {
     let mut r = base("crate_reward_reveal", "Crate Reward Reveal", Category::Crate);
-    r.duration = 1.7;
+    r.duration = 1.5;
     r.fade_out = 0.2;
     r.style = 0.7;
     r.tags = vec!["crate".into(), "reward".into(), "riser".into(), "magic".into()];
@@ -609,7 +609,7 @@ fn reward_reveal() -> Recipe {
 
 fn metal_open() -> Recipe {
     let mut r = base("crate_metal_open", "Metal Crate Open", Category::Crate);
-    r.duration = 1.1;
+    r.duration = 0.9;
     r.fade_out = 0.1;
     r.style = 0.35;
     r.tags = vec!["crate".into(), "metal".into(), "open".into(), "lid".into()];

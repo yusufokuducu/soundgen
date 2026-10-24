@@ -1,0 +1,14 @@
+[package]
+name = "soundgen"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+sg-dsp = { workspace = true }
+sg-engine = { workspace = true }
+sg-presets = { workspace = true }
+sg-io = { workspace = true }
+eframe = "0.37"
+egui = "0.37"
+anyhow = { workspace = true }

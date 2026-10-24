@@ -263,7 +263,7 @@ fn footstep_mud() -> Recipe {
             },
         )
         .gain(-10.0)
-        .style(0.9, 1.7),
+        .style(0.5, 1.9),
     );
     r = r.layer(
         Layer::new(
@@ -675,7 +675,7 @@ fn door_creak() -> Recipe {
         )
         .gain(3.0)
         .pan(0.2)
-        .style(0.9, 1.6),
+        .style(0.5, 1.8),
     );
     r.layer(
         Layer::new(
@@ -784,6 +784,10 @@ mod tests {
     fn foley_presets_render_cleanly() {
         let presets = presets();
         assert!(presets.len() >= 8, "expected at least 8 foley presets");
+        let mut ids: Vec<&str> = presets.iter().map(|p| p.id.as_str()).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), presets.len(), "duplicate preset ids");
         for r in presets {
             assert_eq!(r.category, Category::Foley, "{} wrong category", r.id);
             assert!((3..=8).contains(&r.layers.len()), "{} has {} layers", r.id, r.layers.len());
@@ -800,6 +804,13 @@ mod tests {
             assert!(peak > 0.01, "{} silent (peak {peak})", r.id);
             assert!(peak <= 1.0, "{} clips (peak {peak})", r.id);
             assert!(buf.samples.iter().all(|s| s.is_finite()), "{} has NaN", r.id);
+            // Both ends of the realism <-> cartoon axis must stay sane.
+            for s in [0.0f32, 1.0] {
+                let styled = sg_engine::render_with_style(&r, 42, s);
+                assert!(styled.samples.iter().all(|x| x.is_finite()), "{} style {s} has NaN", r.id);
+                assert!(styled.peak() > 0.01, "{} style {s} is silent", r.id);
+                assert!(styled.peak() <= 1.0, "{} style {s} clips", r.id);
+            }
 
             if r.id.starts_with("foley_footstep") {
                 assert!(
@@ -816,6 +827,17 @@ mod tests {
             }
             if r.id == "foley_body_land" {
                 assert!(buf.duration() > 0.5, "body land should breathe");
+            }
+            if r.id == "foley_door_creak" {
+                assert!(
+                    (1.5..=2.5).contains(&buf.duration()),
+                    "door creak should be long, got {:.3}s",
+                    buf.duration()
+                );
+            }
+            if r.id == "foley_debris_glass" {
+                let shards = r.layers.iter().filter(|l| matches!(l.kind, LayerKind::Modal { .. })).count();
+                assert!((6..=8).contains(&shards), "expected 6-8 glass shards, got {shards}");
             }
 
             println!(

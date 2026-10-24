@@ -1,4 +1,4 @@
-﻿//! Zombie vocal presets: growls, screams, pain, feeding and a horde bed.
+//! Zombie vocal presets: growls, screams, pain, feeding and a horde bed.
 //!
 //! The "human but wrong" recipe from the research (§3.7-3.10): a low, jittery
 //! glottal saw, a sub-octave, granular rasp for the wet throat, and breath.
@@ -419,7 +419,8 @@ fn pain_hit() -> Recipe {
         "short".into(),
     ];
     r.description =
-        "Short pained grunt: a 180->105 Hz strained saw, throat rasp, chest thud and a wet exhale.".into();
+        "Short pained grunt: a 180->105 Hz strained saw, throat rasp, chest thud and a wet exhale."
+            .into();
     r.master = MasterChain {
         highpass_hz: 55.0,
         low_shelf_db: 1.0,
@@ -527,7 +528,11 @@ fn pain_hit() -> Recipe {
 // ---------------------------------------------------------------------------
 
 fn attack_lunge() -> Recipe {
-    let mut r = base("zombie_attack_lunge", "Zombie Attack Lunge", Category::Zombie);
+    let mut r = base(
+        "zombie_attack_lunge",
+        "Zombie Attack Lunge",
+        Category::Zombie,
+    );
     r.duration = 1.10;
     r.fade_out = 0.04;
     r.style = 0.50;
@@ -771,7 +776,11 @@ fn bite() -> Recipe {
 // ---------------------------------------------------------------------------
 
 fn death_rattle() -> Recipe {
-    let mut r = base("zombie_death_rattle", "Zombie Death Rattle", Category::Zombie);
+    let mut r = base(
+        "zombie_death_rattle",
+        "Zombie Death Rattle",
+        Category::Zombie,
+    );
     r.duration = 2.40;
     r.fade_out = 0.05;
     r.style = 0.50;
@@ -1048,7 +1057,8 @@ fn horde_bed() -> Recipe {
         "layered".into(),
     ];
     r.description =
-        "Three offset growls panned across the field over a granular rasp bed and a low sub drone.".into();
+        "Three offset growls panned across the field over a granular rasp bed and a low sub drone."
+            .into();
     r.master = MasterChain {
         highpass_hz: 45.0,
         low_shelf_db: 1.5,
@@ -1191,7 +1201,11 @@ mod tests {
             let peak = buf.peak();
             assert!(peak > 0.01, "{} silent (peak {peak})", r.id);
             assert!(peak <= 1.0, "{} clips (peak {peak})", r.id);
-            assert!(buf.samples.iter().all(|s| s.is_finite()), "{} has NaN", r.id);
+            assert!(
+                buf.samples.iter().all(|s| s.is_finite()),
+                "{} has NaN",
+                r.id
+            );
             assert!(r.layers.len() >= 3, "{} needs 3+ layers", r.id);
             println!(
                 "{}: {:.3}s peak {:.2} dBFS rms {:.4} lufs {:.1}",

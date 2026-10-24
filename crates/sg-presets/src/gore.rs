@@ -136,7 +136,7 @@ fn flesh_hit() -> Recipe {
         )
         .gain(2.0)
         .pan(0.1)
-        .style(0.8, 1.6),
+        .style(0.35, 1.9),
     );
     r.layer(
         Layer::new(
@@ -216,7 +216,7 @@ fn flesh_slash() -> Recipe {
         )
         .gain(0.0)
         .pan(0.2)
-        .style(0.9, 1.6),
+        .style(0.5, 1.8),
     );
     r = r.layer(
         Layer::new(
@@ -297,7 +297,7 @@ fn bone_break() -> Recipe {
                 detune_cents: 0.0,
             },
         )
-        .gain(-12.0)
+        .gain(-10.0)
         .style(1.0, 1.3),
     );
     r = r.layer(
@@ -311,7 +311,7 @@ fn bone_break() -> Recipe {
                 tame_hz: 14_000.0,
             },
         )
-        .gain(-7.0)
+        .gain(-4.0)
         .pan(0.12)
         .style(0.9, 1.3),
     );
@@ -418,7 +418,7 @@ fn head_pop() -> Recipe {
         )
         .gain(5.0)
         .pan(0.12)
-        .style(0.9, 1.7),
+        .style(0.5, 1.8),
     );
     r = r.layer(
         Layer::new(
@@ -606,7 +606,7 @@ fn blood_splat() -> Recipe {
                 pitch_jitter: 0.45,
             },
         )
-        .gain(1.0)
+        .gain(4.0)
         .pan(-0.12)
         .style(1.0, 1.5),
     );
@@ -623,7 +623,7 @@ fn blood_splat() -> Recipe {
                 pitch_jitter: 0.55,
             },
         )
-        .gain(-12.0)
+        .gain(-6.0)
         .pan(0.28)
         .delay(0.09)
         .style(0.8, 1.8),
@@ -643,7 +643,7 @@ fn blood_splat() -> Recipe {
                 vibrato: 0.0,
             },
         )
-        .gain(-15.0)
+        .gain(-10.0)
         .style(1.0, 1.5),
     )
 }
@@ -832,7 +832,7 @@ fn zombie_crunch() -> Recipe {
         )
         .gain(3.0)
         .pan(-0.08)
-        .style(0.9, 1.6),
+        .style(0.5, 1.8),
     );
     r.layer(
         Layer::new(
@@ -859,60 +859,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn calibrate_layers() {
-        for r in presets().into_iter().chain(crate::foley::presets()) {
-            let full = sg_engine::render(&r, 42);
-            let full_rms = full.rms().max(1e-9);
-            let (pi, _) = full
-                .samples
-                .iter()
-                .enumerate()
-                .max_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap())
-                .unwrap();
-            println!("== {} peak at {:.4}s ({:.2} dB)", r.id, pi as f32 / 2.0 / 48_000.0, sg_dsp::gain_to_db(full.peak()));
-            let tail_start = full.frames().saturating_sub((0.12 * 48_000.0) as usize);
-            let tail_peak = full.samples[tail_start * 2..]
-                .iter()
-                .fold(0.0f32, |m, s| m.max(s.abs()));
-            println!("   tail peak {:.2} dB  fade_out {:.3} fade_in {:.4}", sg_dsp::gain_to_db(tail_peak), r.fade_out, r.fade_in);
-            for (i, l) in r.layers.iter().enumerate() {
-                let mut partial = r.clone();
-                partial.layers[i].mute = true;
-                let without = sg_engine::render(&partial, 42);
-                let diff: f32 = full
-                    .samples
-                    .iter()
-                    .zip(&without.samples)
-                    .map(|(a, b)| (a - b).powi(2))
-                    .sum::<f32>()
-                    / full.samples.len() as f32;
-                let mut one = r.clone();
-                for (j, other) in one.layers.iter_mut().enumerate() {
-                    other.mute = j != i;
-                }
-                let solo = sg_engine::render(&one, 42);
-                let diff_peak = full
-                    .samples
-                    .iter()
-                    .zip(&without.samples)
-                    .map(|(a, b)| (a - b).abs())
-                    .fold(0.0f32, f32::max);
-                println!(
-                    "   {:<16} g{:6.1} rms {:7.2} dB  pk {:7.2} dB  crest {:5.2}",
-                    l.name,
-                    l.gain_db,
-                    sg_dsp::gain_to_db(diff.sqrt() / full_rms),
-                    sg_dsp::gain_to_db(diff_peak / full.peak()),
-                    sg_dsp::gain_to_db(solo.peak() / solo.rms().max(1e-9))
-                );
-            }
-        }
-    }
-
-    #[test]
     fn gore_presets_render_cleanly() {
         let presets = presets();
         assert!(presets.len() >= 8, "expected at least 8 gore presets");
+        let mut ids: Vec<&str> = presets.iter().map(|p| p.id.as_str()).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), presets.len(), "duplicate preset ids");
         for r in presets {
             assert_eq!(r.category, Category::Gore, "{} wrong category", r.id);
             assert!((3..=6).contains(&r.layers.len()), "{} has {} layers", r.id, r.layers.len());
@@ -929,6 +882,13 @@ mod tests {
             assert!(peak > 0.01, "{} silent (peak {peak})", r.id);
             assert!(peak <= 1.0, "{} clips (peak {peak})", r.id);
             assert!(buf.samples.iter().all(|s| s.is_finite()), "{} has NaN", r.id);
+            // Both ends of the realism <-> cartoon axis must stay sane.
+            for s in [0.0f32, 1.0] {
+                let styled = sg_engine::render_with_style(&r, 42, s);
+                assert!(styled.samples.iter().all(|x| x.is_finite()), "{} style {s} has NaN", r.id);
+                assert!(styled.peak() > 0.01, "{} style {s} is silent", r.id);
+                assert!(styled.peak() <= 1.0, "{} style {s} clips", r.id);
+            }
             println!(
                 "{}: {:.3}s peak {:.2} dBFS rms {:.4} lufs {:.1} layers {}",
                 r.id,

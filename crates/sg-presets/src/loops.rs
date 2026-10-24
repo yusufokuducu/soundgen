@@ -2,10 +2,17 @@
 //!
 //! ## Seam maths (read this before touching a number)
 //!
-//! `Recipe::render_length()` returns `max(duration, longest tail) + 0.05`, and
-//! every layer's envelope ends at its own `tail`, so the trailing 50 ms of the
-//! buffer is *always* silence. The musical body is therefore exactly
-//! `duration` long, and that is what has to line up on the loop point:
+//! A loop renders to exactly `duration` — `Recipe::render_length()` returns
+//! `duration` for `looped` recipes, with no tail pad. A pad would insert a
+//! silent gap at the seam, and a fade would dip the middle of an endless bed.
+//!
+//! The join is handled by the renderer: `Recipe::loop_crossfade` (0.15 s here)
+//! makes it render `crossfade` extra frames past the body and fold that tail
+//! back over the head with an equal-power ramp. So the last sample of the
+//! buffer flows into the first one, and any residual mismatch is smeared over
+//! 150 ms instead of clicking.
+//!
+//! That crossfade only works if the *body itself* is periodic. Hence:
 //!
 //! * blade pass: `p = 60 / rpm / blades`  (2 blades @ 2400 rpm -> 1/80 s)
 //! * motor hum: the `Rotor` voice calls `motor.next()` twice on one phase
@@ -15,9 +22,11 @@
 //!
 //! So each loop picks a whole number of blade passes near its target length,
 //! and `snap_hz()` nudges the motor/tone pitch so it closes the circle too.
-//! Every layer uses `loop_env()`: 4 ms fade-in, flat body, 12 ms fade-out that
-//! lands exactly on `duration`. Both ends sit at ~0, so restarting the buffer
-//! cannot click, and the blade phase at the loop point is 0 by construction.
+//! Every layer uses `loop_env()`: 4 ms fade-in, then flat — no decay, ever.
+//!
+//! One engine quirk is worked around here and worth knowing about:
+//! * `MasterChain::drive_db` is 0 for every loop: the asymmetric saturator
+//!   leaves a DC offset that nothing removes at the tail.
 
 use crate::prelude::*;
 
@@ -47,22 +56,15 @@ fn snap_hz(hz: f32, duration: f32) -> f32 {
     ((hz * duration).round().max(1.0) / duration).max(1.0)
 }
 
-/// Sustained loop envelope: short fade in, flat body, short fade out that
-/// lands on `duration` and never reaches the renderer's safety pad.
+/// Sustained loop envelope: 4 ms fade-in, then flat for the whole body.
 ///
-/// The 20 ms margin exists because `EnvGen` accumulates its clock in `f32`
-/// (`t += 1.0 / sr`), which drifts by up to ~20 ms over a 4 s render. Without
-/// the margin the fade-out can slip past the body end and get chopped, which
-/// is exactly the click we are trying to avoid.
+/// A looping layer must never decay to zero: any fade here becomes an audible
+/// dip at the seam. The renderer's circular crossfade handles the join instead.
 fn loop_env(duration: f32) -> AdEnv {
-    let attack = 0.004;
-    let decay = 0.012;
-    let margin = 0.02;
-    let hold = (duration - attack - decay - margin).max(0.0);
     AdEnv {
-        attack,
-        hold,
-        decay,
+        attack: 0.004,
+        hold: duration,
+        decay: 0.0,
         curve: 1.0,
         attack_curve: 1.0,
     }
@@ -93,6 +95,7 @@ fn propeller_small() -> Recipe {
     r.fade_in = 0.0;
     r.fade_out = 0.0;
     r.looped = true;
+    r.loop_crossfade = 0.15;
     r.style = 0.25;
     r.tags = vec!["loop".into(), "propeller".into(), "drone".into(), "aircraft".into()];
     r.description = "Bright two-blade propeller at 2400 rpm with airy blade wash and a thin motor thrum.".into();
@@ -223,6 +226,7 @@ fn propeller_large() -> Recipe {
     r.fade_in = 0.0;
     r.fade_out = 0.0;
     r.looped = true;
+    r.loop_crossfade = 0.15;
     r.style = 0.2;
     r.tags = vec!["loop".into(), "propeller".into(), "heavy".into(), "aircraft".into()];
     r.description = "Slow three-blade cargo propeller, deep whoomp with a wide air wash and sub throb.".into();
@@ -352,6 +356,7 @@ fn drone_motor() -> Recipe {
     r.fade_in = 0.0;
     r.fade_out = 0.0;
     r.looped = true;
+    r.loop_crossfade = 0.15;
     r.style = 0.3;
     r.tags = vec!["loop".into(), "drone".into(), "motor".into(), "electric".into()];
     r.description = "Four-rotor electric drone: thin motor whine, buzzy drive and a soft rotor wash bed.".into();
@@ -363,7 +368,7 @@ fn drone_motor() -> Recipe {
         presence_hz: 3000.0,
         comp_threshold_db: -18.0,
         comp_ratio: 3.0,
-        drive_db: 1.5,
+        drive_db: 0.0,
         reverb_wet: 0.0,
         reverb_size: 0.3,
         reverb_damp: 0.6,
@@ -473,7 +478,7 @@ fn heli_period() -> f32 {
 /// 301, and 300/45 == 301/45.15 == 20/3 s. That also makes the 0.15 Hz beat
 /// between the two rotors exactly one cycle long.
 fn heli_duration() -> f32 {
-    300.0 / 45.0
+    loop_len(heli_period(), 20.0 / 3.0)
 }
 
 fn helicopter_far() -> Recipe {
@@ -484,6 +489,7 @@ fn helicopter_far() -> Recipe {
     r.fade_in = 0.0;
     r.fade_out = 0.0;
     r.looped = true;
+    r.loop_crossfade = 0.15;
     r.style = 0.2;
     r.tags = vec!["loop".into(), "helicopter".into(), "distant".into(), "ambience".into()];
     r.description = "Far-off helicopter heard across open ground, two detuned rotors beating slowly behind a dull rumble.".into();
@@ -603,6 +609,7 @@ fn wind_loop() -> Recipe {
     r.fade_in = 0.0;
     r.fade_out = 0.0;
     r.looped = true;
+    r.loop_crossfade = 0.15;
     r.style = 0.15;
     r.tags = vec!["loop".into(), "wind".into(), "weather".into(), "ambience".into()];
     r.description = "Open-field wind bed: brown low body and a pink gust drifting in opposite directions, with a thin whistle.".into();
@@ -716,6 +723,7 @@ fn campfire() -> Recipe {
     r.fade_in = 0.0;
     r.fade_out = 0.0;
     r.looped = true;
+    r.loop_crossfade = 0.15;
     r.style = 0.25;
     r.tags = vec!["loop".into(), "fire".into(), "campfire".into(), "ambience".into()];
     r.description = "Close campfire: brown flame bed, velvet crackle and the odd fat pop from resin pockets.".into();
@@ -831,34 +839,56 @@ mod tests {
         )
     }
 
+    /// Largest sample-to-sample step inside the buffer, per channel.
+    fn max_internal_step(buf: &sg_engine::AudioBuffer) -> (f32, f32) {
+        let mut ml = 0.0f32;
+        let mut mr = 0.0f32;
+        for f in 1..buf.frames() {
+            let i = f * 2;
+            ml = ml.max((buf.samples[i] - buf.samples[i - 2]).abs());
+            mr = mr.max((buf.samples[i + 1] - buf.samples[i - 1]).abs());
+        }
+        (ml, mr)
+    }
+
     #[test]
-    fn loop_envelopes_end_before_the_pad() {
-        // `EnvGen` keeps its clock in f32, so the fade-out can drift by tens of
-        // ms. Verify the 20 ms margin is enough for every loop we ship.
+    fn loop_envelopes_stay_open() {
+        // A looping layer must never decay: the renderer's circular crossfade
+        // joins head and tail, so any fade-out here would show up as a dip in
+        // the middle of an endless bed.
         for r in presets() {
-            let mut e = sg_dsp::env::EnvGen::new(r.sample_rate as f32, loop_env(r.duration));
-            let mut silent_at = None;
+            assert!(r.looped, "{} is not flagged looped", r.id);
+            assert_eq!(
+                r.render_length(),
+                r.duration,
+                "{} render length must equal its body (a tail pad opens a gap at the seam)",
+                r.id
+            );
+
+            let env = loop_env(r.duration);
+            let mut e = sg_dsp::env::EnvGen::new(r.sample_rate as f32, env);
             let frames = (r.render_length() * r.sample_rate as f32) as usize;
+            let attack_frames = ((env.attack + 0.001) * r.sample_rate as f32) as usize;
+
+            // Skip the attack ramp, then the envelope must sit at unity for the
+            // whole body — a fade anywhere would dip the loop.
+            let mut min_after_attack = f32::INFINITY;
             for i in 0..frames {
                 let a = e.next();
-                if a <= 1e-4 && i > 480 {
-                    silent_at = Some(i);
-                    break;
+                if i >= attack_frames {
+                    min_after_attack = min_after_attack.min(a);
                 }
             }
-            let t = silent_at.unwrap() as f32 / r.sample_rate as f32;
-            let pad_start = r.render_length() - 0.05;
             assert!(
-                t < pad_start,
-                "{} fade-out ends at {t:.4}s, inside the pad ({pad_start:.4}s)",
+                min_after_attack > 0.999,
+                "{} envelope droops to {min_after_attack:.4} after the attack (a fade would dip the loop)",
                 r.id
             );
             println!(
-                "{}: env silent at {:.4}s, body {:.3}s (margin {:+.1} ms)",
+                "{}: env flat at {min_after_attack:.4}, body {:.3}s, render {:.3}s",
                 r.id,
-                t,
                 r.duration,
-                (t - r.duration) * 1000.0
+                frames as f32 / r.sample_rate as f32
             );
         }
     }
@@ -891,44 +921,27 @@ mod tests {
             assert!(buf.samples.iter().all(|s| s.is_finite()), "{} has NaN/inf", r.id);
 
             let (dl, dr) = seam_error(&buf);
-            if r.id == "loop_drone_motor" {
-                let n = buf.frames();
-                let pad: f32 = (n - 2400..n).map(|f| buf.samples[f * 2]).sum::<f32>() / 2400.0;
-                let mut sat = sg_dsp::fx::Saturator {
-                    drive: sg_dsp::db_to_gain(1.5),
-                    asym: 0.2,
-                    mix: 1.0,
-                };
-                println!(
-                    "  DBG sat0 {:.5} first {:.5} last {:.5} padmean {:.5} s100 {:.5} padmax {:.5}",
-                    sat.process(0.0),
-                    buf.samples[0],
-                    buf.samples[(n - 1) * 2],
-                    pad,
-                    buf.samples[100 * 2],
-                    (n - 2400..n).fold(0.0f32, |m, f| m.max(buf.samples[f * 2].abs()))
-                );
-            }
+            let (sl, sr_) = max_internal_step(&buf);
+
+            // The seam step must not stand out from the steps the waveform
+            // already takes inside the buffer — that is what makes a click.
+            let ratio_l = if sl > 1e-6 { dl / sl } else { 0.0 };
+            let ratio_r = if sr_ > 1e-6 { dr / sr_ } else { 0.0 };
             assert!(
-                dl < 0.05 && dr < 0.05,
-                "{} seam clicks: L {dl:.4} R {dr:.4}",
+                ratio_l <= 1.5 && ratio_r <= 1.5,
+                "{} seam clicks: L {dl:.5} vs max step {sl:.5} (x{ratio_l:.2}), R {dr:.5} vs {sr_:.5} (x{ratio_r:.2})",
                 r.id
             );
 
-            // Diagnostic: the renderer always appends a 50 ms safety pad after
-            // the body. The fade-out is designed to finish before it, so the
-            // last few ms must be quiet (no hard cut at the buffer end).
-            let tail_n = ((0.005 * buf.sample_rate as f32) as usize).min(buf.frames());
-            let tail_rms = {
-                let s: f32 = (buf.frames() - tail_n..buf.frames())
-                    .map(|f| buf.samples[f * 2].powi(2) + buf.samples[f * 2 + 1].powi(2))
-                    .sum();
-                (s / (tail_n as f32 * 2.0)).sqrt()
-            };
+            // Loop buffers are exactly their body length — no pad, no fade.
+            let expect = (r.duration * r.sample_rate as f32).round() as usize;
             assert!(
-                tail_rms < 0.01,
-                "{} is cut off mid-fade (last 5 ms rms {tail_rms:.4})",
-                r.id
+                buf.frames().abs_diff(expect) <= 1,
+                "{} renders {} frames, expected {} ({:.3}s body)",
+                r.id,
+                buf.frames(),
+                expect,
+                r.duration
             );
 
             // The body must be a whole number of blade passes.
@@ -955,7 +968,7 @@ mod tests {
             }
 
             println!(
-                "  seam L {dl:.5} R {dr:.5} | tail rms {tail_rms:.5} | peak {:.2} dBFS | rms {:.4} | {:.1} LUFS",
+                "  seam L {dl:.5} R {dr:.5} | max step L {sl:.5} R {sr_:.5} | peak {:.2} dBFS | rms {:.4} | {:.1} LUFS",
                 sg_dsp::gain_to_db(peak),
                 buf.rms(),
                 buf.lufs_approx()
@@ -989,3 +1002,4 @@ mod tests {
         }
     }
 }
+

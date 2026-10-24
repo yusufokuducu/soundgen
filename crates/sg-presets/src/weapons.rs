@@ -1,4 +1,4 @@
-﻿//! Weapon presets: gunshots, suppressed shots, mechanical handling and brass.
+//! Weapon presets: gunshots, suppressed shots, mechanical handling and brass.
 //!
 //! Layer roles follow the research recipes (docs/research/01-dsp-sentez.md §3):
 //! crack = the supersonic transient, body = the low pitch-dropping pressure
@@ -37,23 +37,14 @@ fn metal_modes(base: f32, decay: f32) -> Vec<Mode> {
     for i in 0..5 {
         let f = base * RATIO[i] * MISTUNE[i];
         if f < 16_000.0 {
-            v.push(Mode::new(f, AMP[i], decay * (1.0 - i as f32 * 0.14).max(0.35)));
+            v.push(Mode::new(
+                f,
+                AMP[i],
+                decay * (1.0 - i as f32 * 0.14).max(0.35),
+            ));
         }
     }
     v
-}
-
-/// Circular flat plate (bone / thin steel): 1 / 1.594 / 2.136 / 2.296 / 2.653.
-fn plate_modes(base: f32, decay: f32) -> Vec<Mode> {
-    const RATIO: [f32; 5] = [1.0, 1.594, 2.136, 2.296, 2.653];
-    const MISTUNE: [f32; 5] = [0.988, 1.014, 0.993, 1.009, 1.017];
-    const AMP: [f32; 5] = [1.0, 0.66, 0.48, 0.34, 0.22];
-    RATIO
-        .iter()
-        .zip(MISTUNE)
-        .zip(AMP)
-        .map(|((r, m), a)| Mode::new(base * r * m, a, decay * (0.85 + a * 0.2)))
-        .collect()
 }
 
 /// Wooden box: 1 / 2.32 / 3.71 / 5.14 / 6.90.
@@ -132,7 +123,7 @@ fn pistol_fire() -> Recipe {
                 vibrato: 0.0,
             },
         )
-        .gain(-7.0)
+        .gain(-4.0)
         .style(1.0, 1.45),
     );
     r = r.layer(
@@ -258,7 +249,7 @@ fn rifle_fire() -> Recipe {
                 vibrato: 0.0,
             },
         )
-        .gain(-8.0)
+        .gain(-5.0)
         .style(1.0, 1.40),
     );
     r = r.layer(
@@ -350,7 +341,7 @@ fn shotgun_fire() -> Recipe {
                 tame_hz: 2200.0,
             },
         )
-        .gain(5.0)
+        .gain(7.0)
         .style(1.0, 1.30),
     );
     r = r.layer(
@@ -382,7 +373,7 @@ fn shotgun_fire() -> Recipe {
                 vibrato: 0.0,
             },
         )
-        .gain(-6.0)
+        .gain(-4.0)
         .style(1.0, 1.50),
     );
     r = r.layer(
@@ -432,7 +423,7 @@ fn shotgun_fire() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(1.0)
+        .gain(4.0)
         .pan(0.10)
         .delay(0.020)
         .style(0.7, 1.60),
@@ -498,7 +489,7 @@ fn smg_fire() -> Recipe {
                 vibrato: 0.0,
             },
         )
-        .gain(-8.0)
+        .gain(-5.0)
         .style(1.0, 1.40),
     );
     r = r.layer(
@@ -528,7 +519,7 @@ fn smg_fire() -> Recipe {
                 tame_hz: 900.0,
             },
         )
-        .gain(-6.0)
+        .gain(-2.0)
         .style(1.0, 1.20),
     );
     r.layer(
@@ -542,7 +533,7 @@ fn smg_fire() -> Recipe {
                 tame_hz: 0.0,
             },
         )
-        .gain(-7.0)
+        .gain(-4.0)
         .pan(-0.12)
         .delay(0.010)
         .style(0.6, 1.40),
@@ -550,7 +541,11 @@ fn smg_fire() -> Recipe {
 }
 
 fn suppressed_fire() -> Recipe {
-    let mut r = base("weapon_suppressed_fire", "Suppressed Pistol Fire", Category::Weapon);
+    let mut r = base(
+        "weapon_suppressed_fire",
+        "Suppressed Pistol Fire",
+        Category::Weapon,
+    );
     r.duration = 0.42;
     r.fade_out = 0.035;
     r.style = 0.35;
@@ -1309,7 +1304,11 @@ mod tests {
             let peak = buf.peak();
             assert!(peak > 0.01, "{} silent (peak {peak})", r.id);
             assert!(peak <= 1.0, "{} clips (peak {peak})", r.id);
-            assert!(buf.samples.iter().all(|s| s.is_finite()), "{} has NaN", r.id);
+            assert!(
+                buf.samples.iter().all(|s| s.is_finite()),
+                "{} has NaN",
+                r.id
+            );
             assert!(r.layers.len() >= 3, "{} needs 3+ layers", r.id);
             println!(
                 "{}: {:.3}s peak {:.2} dBFS rms {:.4} lufs {:.1}",
