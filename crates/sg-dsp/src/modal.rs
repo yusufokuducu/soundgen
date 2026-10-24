@@ -45,12 +45,18 @@ impl ModeState {
         let r = (-6.907_755 / (mode.decay.max(1e-4) * sr)).exp().clamp(0.0, 0.999_99);
         let a1 = 2.0 * r * w.cos();
         let a2 = -r * r;
+        // A unit impulse into this two-pole resonator leaves a sine whose
+        // amplitude is 1/sin(w). Left uncorrected, every mode gets an implicit
+        // +6 dB/oct tilt towards the top, which is a large part of why the old
+        // bodies sounded synthetic. Scaling by sin(w) makes the requested
+        // amplitude mean what it says.
+        let amp = mode.amp * w.sin();
         Self {
             y1: 0.0,
             y2: 0.0,
             a1,
             a2,
-            amp: mode.amp,
+            amp,
         }
     }
 
