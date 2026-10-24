@@ -5,6 +5,7 @@
 //! randomness unless a `Rng` is passed in, deterministic for a given seed.
 
 pub mod env;
+pub mod excite;
 pub mod filter;
 pub mod fx;
 pub mod modal;

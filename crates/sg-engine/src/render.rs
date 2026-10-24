@@ -1,10 +1,11 @@
-﻿//! Offline renderer: recipe -> stereo buffer. Fast enough (~ms) to re-render
+//! Offline renderer: recipe -> stereo buffer. Fast enough (~ms) to re-render
 //! on every knob move and still feel instant.
 
 use crate::buffer::AudioBuffer;
 use crate::layer::{Layer, LayerKind};
 use crate::recipe::Recipe;
 use sg_dsp::env::EnvGen;
+use sg_dsp::excite::{ImpactExcitation, ImpactParams};
 use sg_dsp::filter::{Biquad, Svf, SvfMode};
 use sg_dsp::fx::{Compressor, DcBlocker, Limiter, Reverb, Saturator};
 use sg_dsp::modal::ModalBank;
@@ -39,7 +40,7 @@ pub fn render_with_style(recipe: &Recipe, seed: u64, style: f32) -> AudioBuffer 
         }
         let mut rng = Rng::new(seed.wrapping_mul(0x9E37_79B9) ^ (idx as u64 + 1).wrapping_mul(0xD1B5_4A32));
         let mut mono = vec![0.0f32; frames];
-        render_layer(layer, &mut rng, sr, style, &mut mono);
+        render_layer(layer, &mut rng, sr, style, recipe.velocity, &mut mono);
 
         let gain = db_to_gain(layer.gain_db) * layer.style_multiplier(style);
         let (lg, rg) = pan_gains(layer.pan);
@@ -97,7 +98,7 @@ pub fn render_variations(recipe: &Recipe, count: usize, base_seed: u64) -> Vec<A
         .collect()
 }
 
-fn render_layer(layer: &Layer, rng: &mut Rng, sr: f32, style: f32, out: &mut [f32]) {
+fn render_layer(layer: &Layer, rng: &mut Rng, sr: f32, style: f32, velocity: f32, out: &mut [f32]) {
     match &layer.kind {
         LayerKind::Noise {
             color,
@@ -188,9 +189,10 @@ fn render_layer(layer: &Layer, rng: &mut Rng, sr: f32, style: f32, out: &mut [f3
             exciter_lp,
             detune_cents,
         } => {
-            let ratio = 2f32.powf((detune_cents + style * 35.0) / 1200.0);
-            // Cartoon: resonators ring longer and looser.
-            let decay_scale = 1.0 + style * 0.65;
+            let ratio = 2f32.powf((detune_cents + style * 12.0) / 1200.0);
+            // Cartoon: resonators ring longer, but stay in tune (detuning is
+            // what makes them read as broken, not as stylised).
+            let decay_scale = 1.0 + style * 0.45;
             let shifted: Vec<_> = modes
                 .iter()
                 .map(|m| sg_dsp::modal::Mode {
@@ -200,24 +202,36 @@ fn render_layer(layer: &Layer, rng: &mut Rng, sr: f32, style: f32, out: &mut [f3
                 })
                 .collect();
             let mut bank = ModalBank::new(sr, &shifted);
+
+            // `exciter_ms` is the macro contact time: how long the two bodies
+            // stay touching. That single number decides where the pulse rolls
+            // off (f_-3dB = 0.634 / Tc), so it is clamped to what a real
+            // surface can physically do. Zero means "unspecified", which for
+            // this library is always a metal-on-metal mechanism: 0.15 ms.
+            let contact = if *exciter_ms <= 0.0 {
+                0.000_15
+            } else {
+                (*exciter_ms * 0.001).clamp(0.000_05, 0.006)
+            };
+            let mut exc =
+                ImpactExcitation::new(sr, ImpactParams::new(contact, 0.35 + 0.45 * style));
+            exc.prepare(velocity, rng);
+
             let mut nz = NoiseGen::new(*exciter_color);
             let mut hp = Svf::new(sr);
             hp.set(*exciter_hp, 0.707);
             let mut lp = Svf::new(sr);
             lp.set(*exciter_lp, 0.707);
-            let exc_len = (*exciter_ms * 0.001 * sr).max(0.0) as usize;
-            let mut i = 0usize;
-            while i < out.len() {
-                let exc = if i == 0 && exc_len == 0 {
-                    1.0
-                } else if i < exc_len {
-                    let w = 1.0 - i as f32 / exc_len as f32;
-                    lp.process(hp.process(nz.next(rng), SvfMode::HighPass), SvfMode::LowPass) * w
-                } else {
-                    0.0
-                };
-                out[i] += bank.process(exc);
-                i += 1;
+
+            for sample in out.iter_mut() {
+                let (force, asperity) = exc.next(rng);
+                // A little filtered air riding on the pulse keeps the body
+                // from sounding like a pure sine stack, but it is a garnish:
+                // the Hertz force is what excites the modes.
+                let air = lp.process(hp.process(nz.next(rng), SvfMode::HighPass), SvfMode::LowPass)
+                    * force
+                    * 0.35;
+                *sample += bank.process(force + asperity + air);
             }
         }
         LayerKind::Grain {

@@ -61,6 +61,9 @@ pub struct Recipe {
     pub style: f32,
     /// Loops only: circular crossfade length in seconds (0 = hard splice).
     pub loop_crossfade: f32,
+    /// Strike energy for every modal body in this recipe, 0..1. Drives both
+    /// momentum (loudness) and asperity (brightness) of an impact.
+    pub velocity: f32,
     pub sample_rate: u32,
 }
 
@@ -80,6 +83,7 @@ impl Recipe {
             master: MasterChain::default(),
             style: 0.35,
             loop_crossfade: 0.0,
+            velocity: 0.75,
             sample_rate: 48_000,
         }
     }

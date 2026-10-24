@@ -1,4 +1,4 @@
-﻿//! Crate category: wooden and metal loot containers — creak, pop, shatter,
+//! Crate category: wooden and metal loot containers — creak, pop, shatter,
 //! lock, reward reveal.
 //!
 //! Modal sets come straight from the research notes: wooden box
@@ -100,7 +100,7 @@ fn wood_creak() -> Recipe {
             "wood body",
             LayerKind::Modal {
                 modes: wood_modes(240.0, 0.55, 0.55),
-                exciter_ms: 10.0,
+                exciter_ms: 0.8,
                 exciter_color: NoiseColor::Pink,
                 exciter_hp: 220.0,
                 exciter_lp: 3200.0,

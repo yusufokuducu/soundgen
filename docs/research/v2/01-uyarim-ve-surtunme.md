@@ -120,6 +120,28 @@ Bu, tablodaki `Tc`'lerle:
 Son satır K3'ün kanıtı: yumruğu yalnız makro Hertz ile modellemek, 44 Hz'lik bir alçak geçiren verir → duyulan
 şey yok. Gerçek yumruk sesi, makro pulsun üstündeki **asperite** temasından gelir. Bu yüzden iki ölçek zorunlu.
 
+**Merkez (centroid) bağlantısı.** "Temas süresi spektral merkezi belirler" cümlesinin sayısal hali —
+Hertz pulsunun spektrumundan sayısal integralle:
+
+```
+genlik-ağırlıklı centroid :  SC ≈ 0.76 / Tc
+güç-ağırlıklı centroid    :  SC_E ≈ 0.41 / Tc
+```
+
+| Temas | Tc | SC (0.76/Tc) | SC_E (0.41/Tc) | Yorum |
+|---|---|---|---|---|
+| Çelik bilya → çelik | 25.9 µs | 29.3 kHz | 15.8 kHz | Nyquist üstü → **malzeme belirler**, temas değil |
+| Cam şişe | 204 µs | 3.7 kHz | 2.0 kHz | cam modları 2–8 kHz → üst modlar zayıf uyarılır |
+| Çekiç → meşe | 334 µs | 2.3 kHz | 1.2 kHz | ahşap modları 200–1.5 kHz → iyi örtüşme |
+| Yumruk → et | 14.5 ms | 52 Hz | 28 Hz | **hiçbir şey uyarmaz** → asperite şart |
+
+Bu tablo §3.2'deki `SC` hedefleriyle tutarlı: gerçek bir tabanca crack'ini `SC(t≈0) = 8–11 kHz` yapmak için
+`Tc ≈ 0.76/9500 = 80 µs` gerekir — yani sert metalin (çelik 26 µs) ile ahşabın (334 µs) arasında bir temas.
+Buradan çıkan **tasarım kuralı**: bir preset'in `Tc`'si, hedeflenen attack centroid'inden geri hesaplanır
+(`Tc = 0.76/SC_hedef`), malzeme tablosundan değil. Malzeme `Tc`'yi sınırlar; hedef onu aşarsa asperite
+katmanı devreye girer. (Silah gövdesinde gerçek temas süresi ölçülmüş bir değer değil — bu bir hedefleme
+kuralı, fiziksel iddia değil.)
+
 ### 1.4 Impuls mü, kuvvet mi? Ayrık zaman formülasyonu
 
 Modal rezonatör (paralel ikinci derece), sürekli: `ÿ + 2σẏ + (σ²+ω²)y = γ·f(t)`.
@@ -1093,6 +1115,8 @@ Hertz temas:        k = (4/3) E* sqrt(R)
                     Tc = 2.94 (5m/(4k))^0.4 v^-0.2
                     δmax = (5 m v²/(4k))^0.4
 Kuvvet spektrumu:   f_-3dB = 0.634/Tc   f_-10dB = 1.09/Tc   f_-20dB = 1.41/Tc
+Puls centroid:      SC ≈ 0.76/Tc (genlik-ağırlıklı)   SC_E ≈ 0.41/Tc (güç)
+Tasarım kuralı:     Tc = 0.76 / SC_hedef             (attack centroid'inden geri hesap)
 Momentum:           J = m v (1+e)
 Modal kazanç:       impuls: g_k = sin(2π f_k/fs)      gürültü: g_k = sqrt(1-r_k²)
                     r_k = exp(-6.907755/(T60_k fs))

@@ -41,8 +41,11 @@ impl Saturator {
         let d = self.drive.max(1e-4);
         let shaped = if self.asym.abs() > 1e-4 {
             // Asymmetric tanh: adds even harmonics (grit, tube-like warmth).
+            // Subtract the curve's own value at x = 0 so the stage is DC-free;
+            // a partial subtraction used to stamp ~0.06 of DC onto every sound,
+            // which the master DC blocker then turned into a low thump.
             let bias = self.asym * 0.35;
-            ((x + bias) * d).tanh() - bias.tanh() * 0.5
+            ((x + bias) * d).tanh() - (bias * d).tanh()
         } else {
             (x * d).tanh()
         };
