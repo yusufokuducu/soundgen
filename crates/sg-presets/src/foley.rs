@@ -1,4 +1,4 @@
-﻿//! Foley — footsteps, body landings, cloth, creaking wood and breaking glass.
+//! Foley — footsteps, body landings, cloth, creaking wood and breaking glass.
 //!
 //! Design notes:
 //!  * footsteps are short (0.2–0.4 s) with only a small room tail; body landings
@@ -11,25 +11,13 @@
 use crate::prelude::*;
 use sg_dsp::rng::Rng;
 
-// Material mode-ratio tables from the research (§2.3).
-const PLATE: [f32; 4] = [1.0, 1.594, 2.136, 2.296];
-const BAR: [f32; 4] = [1.0, 2.756, 5.404, 8.933];
-const WOOD: [f32; 4] = [1.0, 2.32, 3.71, 5.14];
-const GLASS: [f32; 4] = [1.0, 2.32, 4.25, 6.63];
-
-/// Struck-object mode set: ±1.5 % mistune per mode, upper modes quieter and
-/// shorter (material damping, research §2.3).
-fn struck(base: f32, ratios: &[f32], decay: f32, seed: u64) -> Vec<Mode> {
+/// Struck-object mode set from a measured material table, plus a small
+/// deterministic mistune so two presets never share an identical body.
+fn struck(mat: &Material, base: f32, decay: f32, seed: u64) -> Vec<Mode> {
     let mut rng = Rng::new(seed);
-    ratios
-        .iter()
-        .enumerate()
-        .map(|(i, ratio)| {
-            let f = base * ratio * (1.0 + rng.range(-0.015, 0.015));
-            let amp = 1.0 / (1.0 + i as f32 * 0.9);
-            let d = decay * (1.0 - i as f32 * 0.12).max(0.4);
-            Mode::new(f, amp, d)
-        })
+    mat.modes_with_t60(base, decay, 0.5)
+        .into_iter()
+        .map(|m| Mode::new(m.freq * (1.0 + rng.range(-0.012, 0.012)), m.amp, m.decay))
         .collect()
 }
 
@@ -115,7 +103,7 @@ fn footstep_concrete() -> Recipe {
         Layer::new(
             "sole body",
             LayerKind::Modal {
-                modes: struck(185.0, &PLATE, 0.055, 0x0F01_0001),
+                modes: struck(&CONCRETE, 185.0, 0.055, 0x0F01_0001),
                 exciter_ms: 2.0,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 60.0,
@@ -347,7 +335,7 @@ fn footstep_metal() -> Recipe {
         Layer::new(
             "plate ring",
             LayerKind::Modal {
-                modes: struck(900.0, &PLATE, 0.26, 0x0F02_0001),
+                modes: struck(&STEEL, 900.0, 0.260, 0x0F02_0001),
                 exciter_ms: 0.5,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 300.0,
@@ -362,7 +350,7 @@ fn footstep_metal() -> Recipe {
         Layer::new(
             "grate rattle",
             LayerKind::Modal {
-                modes: struck(1450.0, &BAR, 0.12, 0x0F02_0002),
+                modes: struck(&STEEL, 1450.0, 0.120, 0x0F02_0002),
                 exciter_ms: 0.4,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 600.0,
@@ -454,7 +442,7 @@ fn body_land() -> Recipe {
         Layer::new(
             "gear rattle",
             LayerKind::Modal {
-                modes: struck(2100.0, &BAR, 0.1, 0x0F03_0001),
+                modes: struck(&STEEL, 2100.0, 0.100, 0x0F03_0001),
                 exciter_ms: 1.2,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 900.0,
@@ -471,7 +459,7 @@ fn body_land() -> Recipe {
         Layer::new(
             "buckle clink",
             LayerKind::Modal {
-                modes: struck(3200.0, &BAR, 0.07, 0x0F03_0002),
+                modes: struck(&STEEL, 3200.0, 0.070, 0x0F03_0002),
                 exciter_ms: 0.5,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 1400.0,
@@ -555,7 +543,7 @@ fn cloth_rustle() -> Recipe {
         Layer::new(
             "seam tick",
             LayerKind::Modal {
-                modes: struck(1900.0, &PLATE, 0.02, 0x0F04_0001),
+                modes: struck(&CARDBOARD, 1900.0, 0.020, 0x0F04_0001),
                 exciter_ms: 0.3,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 1200.0,
@@ -648,7 +636,7 @@ fn door_creak() -> Recipe {
         Layer::new(
             "frame modes",
             LayerKind::Modal {
-                modes: struck(215.0, &WOOD, 0.3, 0x0F05_0001),
+                modes: struck(&OAK, 215.0, 0.300, 0x0F05_0001),
                 exciter_ms: 3.0,
                 exciter_color: NoiseColor::Pink,
                 exciter_hp: 80.0,
@@ -742,7 +730,7 @@ fn debris_glass() -> Recipe {
             Layer::new(
                 "shard",
                 LayerKind::Modal {
-                    modes: struck(base_hz, &GLASS, decay, seed),
+                    modes: struck(&GLASS, base_hz, decay, seed),
                     exciter_ms: 0.3,
                     exciter_color: NoiseColor::White,
                     exciter_hp: 1500.0,

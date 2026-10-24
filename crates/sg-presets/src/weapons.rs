@@ -24,40 +24,19 @@ pub fn presets() -> Vec<Recipe> {
 }
 
 // ---------------------------------------------------------------------------
-// modal helpers — real material ratios with a fixed per-mode mistune, so the
-// same preset always renders the same object.
+// modal helpers — struck bodies built from measured material tables
+// (`sg_dsp::modal::{STEEL, OAK, ...}`). The pickup comb inside the table is
+// what makes the body sound struck rather than filtered.
 // ---------------------------------------------------------------------------
 
-/// Free-free metal bar: 1 / 2.756 / 5.404 / 8.933 / 13.34.
+/// Steel receiver / barrel / casing: 12 modes, 0.72 damping slope.
 fn metal_modes(base: f32, decay: f32) -> Vec<Mode> {
-    const RATIO: [f32; 5] = [1.0, 2.756, 5.404, 8.933, 13.34];
-    const MISTUNE: [f32; 5] = [1.011, 0.989, 1.007, 0.994, 1.018];
-    const AMP: [f32; 5] = [1.0, 0.60, 0.36, 0.20, 0.10];
-    let mut v = Vec::with_capacity(5);
-    for i in 0..5 {
-        let f = base * RATIO[i] * MISTUNE[i];
-        if f < 16_000.0 {
-            v.push(Mode::new(
-                f,
-                AMP[i],
-                decay * (1.0 - i as f32 * 0.14).max(0.35),
-            ));
-        }
-    }
-    v
+    sg_dsp::modal::STEEL.modes_with_t60(base, decay, 0.5)
 }
 
-/// Wooden box: 1 / 2.32 / 3.71 / 5.14 / 6.90.
+/// Oak plank — crate walls, stocks, pallets.
 fn wood_modes(base: f32, decay: f32) -> Vec<Mode> {
-    const RATIO: [f32; 5] = [1.0, 2.32, 3.71, 5.14, 6.90];
-    const MISTUNE: [f32; 5] = [1.013, 0.991, 1.006, 0.987, 1.015];
-    const AMP: [f32; 5] = [1.0, 0.55, 0.32, 0.18, 0.10];
-    RATIO
-        .iter()
-        .zip(MISTUNE)
-        .zip(AMP)
-        .map(|((r, m), a)| Mode::new(base * r * m, a, decay * (1.0 - a * 0.25)))
-        .collect()
+    sg_dsp::modal::OAK.modes_with_t60(base, decay, 0.5)
 }
 
 // ---------------------------------------------------------------------------

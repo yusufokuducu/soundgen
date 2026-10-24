@@ -7,6 +7,7 @@
 //! grain and pushes the tail.
 
 use crate::prelude::*;
+use sg_dsp::rng::Rng;
 
 pub fn presets() -> Vec<Recipe> {
     vec![
@@ -22,16 +23,14 @@ pub fn presets() -> Vec<Recipe> {
     ]
 }
 
-/// Short helper for the bone/plate material used by the bite.
+/// Hollow bone used by the bite: the measured femur table, not the membrane
+/// series that used to live here.
 fn bone_modes(base: f32, decay: f32) -> Vec<Mode> {
-    const RATIO: [f32; 4] = [1.0, 1.594, 2.136, 2.296];
-    const MISTUNE: [f32; 4] = [1.012, 0.989, 1.017, 0.994];
-    const AMP: [f32; 4] = [1.0, 0.55, 0.38, 0.26];
-    RATIO
-        .iter()
-        .zip(MISTUNE)
-        .zip(AMP)
-        .map(|((r, m), a)| Mode::new(base * r * m, a, decay * (0.8 + a * 0.3)))
+    let mut rng = Rng::new(0x2B0E_0001);
+    sg_dsp::modal::BONE
+        .modes_with_t60(base, decay, 0.5)
+        .into_iter()
+        .map(|m| Mode::new(m.freq * (1.0 + rng.range(-0.012, 0.012)), m.amp, m.decay))
         .collect()
 }
 

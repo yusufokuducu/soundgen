@@ -1,32 +1,22 @@
-﻿//! Gore — wet impacts, bone, splatter and dismemberment.
+//! Gore — wet impacts, bone, splatter and dismemberment.
 //!
 //! Design notes:
 //!  * meat = low Q resonances + lots of wet granular texture (research §3.11)
-//!  * bone / skull = plate-series modal banks with short T60 (research §3.12–3.13)
+//!  * bone / skull = the measured femur table (10 modes, 0.60 damping slope)
+//!    with short T60 (research v2 §2.7)
 //!  * every recipe has a low "weight" layer (60–140 Hz) so hits read as heavy
 //!  * `style` pushes pitch envelopes down, keeps the squish layers and grows tails
 
 use crate::prelude::*;
 use sg_dsp::rng::Rng;
 
-// Material mode-ratio tables from the research (§2.3).
-const PLATE: [f32; 4] = [1.0, 1.594, 2.136, 2.296];
-const BAR: [f32; 4] = [1.0, 2.756, 5.404, 8.933];
-const WOOD: [f32; 4] = [1.0, 2.32, 3.71, 5.14];
-
-/// Struck-object mode set: ±1.5 % mistune per mode, upper modes quieter and
-/// shorter (material damping, research §2.3).
-fn struck(base: f32, ratios: &[f32], decay: f32, seed: u64) -> Vec<Mode> {
+/// Struck-object mode set from a measured material table, plus a small
+/// deterministic mistune so two presets never share an identical body.
+fn struck(mat: &Material, base: f32, decay: f32, seed: u64) -> Vec<Mode> {
     let mut rng = Rng::new(seed);
-    ratios
-        .iter()
-        .enumerate()
-        .map(|(i, ratio)| {
-            let f = base * ratio * (1.0 + rng.range(-0.015, 0.015));
-            let amp = 1.0 / (1.0 + i as f32 * 0.9);
-            let d = decay * (1.0 - i as f32 * 0.12).max(0.4);
-            Mode::new(f, amp, d)
-        })
+    mat.modes_with_t60(base, decay, 0.5)
+        .into_iter()
+        .map(|m| Mode::new(m.freq * (1.0 + rng.range(-0.012, 0.012)), m.amp, m.decay))
         .collect()
 }
 
@@ -289,7 +279,7 @@ fn bone_break() -> Recipe {
         Layer::new(
             "splinters",
             LayerKind::Modal {
-                modes: struck(2900.0, &PLATE, 0.045, 0x0B0E_0001),
+                modes: struck(&BONE, 2900.0, 0.045, 0x0B0E_0001),
                 exciter_ms: 0.6,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 1200.0,
@@ -319,7 +309,7 @@ fn bone_break() -> Recipe {
         Layer::new(
             "debris one",
             LayerKind::Modal {
-                modes: struck(1750.0, &PLATE, 0.03, 0x0B0E_0002),
+                modes: struck(&BONE, 1750.0, 0.030, 0x0B0E_0002),
                 exciter_ms: 0.5,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 900.0,
@@ -336,7 +326,7 @@ fn bone_break() -> Recipe {
         Layer::new(
             "debris two",
             LayerKind::Modal {
-                modes: struck(2350.0, &PLATE, 0.022, 0x0B0E_0003),
+                modes: struck(&BONE, 2350.0, 0.022, 0x0B0E_0003),
                 exciter_ms: 0.4,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 1200.0,
@@ -424,7 +414,7 @@ fn head_pop() -> Recipe {
         Layer::new(
             "skull debris",
             LayerKind::Modal {
-                modes: struck(2400.0, &PLATE, 0.06, 0x0B0E_0010),
+                modes: struck(&BONE, 2400.0, 0.060, 0x0B0E_0010),
                 exciter_ms: 1.0,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 1100.0,
@@ -546,7 +536,7 @@ fn body_fall() -> Recipe {
         Layer::new(
             "settle creak",
             LayerKind::Modal {
-                modes: struck(330.0, &WOOD, 0.09, 0x0B0E_0020),
+                modes: struck(&OAK, 330.0, 0.090, 0x0B0E_0020),
                 exciter_ms: 2.0,
                 exciter_color: NoiseColor::Pink,
                 exciter_hp: 200.0,
@@ -705,7 +695,7 @@ fn dismember() -> Recipe {
         Layer::new(
             "metal snap",
             LayerKind::Modal {
-                modes: struck(1150.0, &BAR, 0.18, 0x0B0E_0030),
+                modes: struck(&BONE, 1150.0, 0.180, 0x0B0E_0030),
                 exciter_ms: 0.4,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 700.0,
@@ -772,7 +762,7 @@ fn zombie_crunch() -> Recipe {
         Layer::new(
             "crunch one",
             LayerKind::Modal {
-                modes: struck(1300.0, &PLATE, 0.06, 0x0B0E_0040),
+                modes: struck(&BONE, 1300.0, 0.060, 0x0B0E_0040),
                 exciter_ms: 1.5,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 600.0,
@@ -787,7 +777,7 @@ fn zombie_crunch() -> Recipe {
         Layer::new(
             "crunch two",
             LayerKind::Modal {
-                modes: struck(1520.0, &PLATE, 0.05, 0x0B0E_0041),
+                modes: struck(&BONE, 1520.0, 0.050, 0x0B0E_0041),
                 exciter_ms: 1.2,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 700.0,
@@ -804,7 +794,7 @@ fn zombie_crunch() -> Recipe {
         Layer::new(
             "crunch three",
             LayerKind::Modal {
-                modes: struck(1120.0, &PLATE, 0.045, 0x0B0E_0042),
+                modes: struck(&BONE, 1120.0, 0.045, 0x0B0E_0042),
                 exciter_ms: 1.0,
                 exciter_color: NoiseColor::White,
                 exciter_hp: 600.0,

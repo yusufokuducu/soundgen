@@ -14,7 +14,10 @@ pub mod prelude {
     pub use crate::layer::{Category, FilterEnv, Layer, LayerKind};
     pub use crate::recipe::{MasterChain, Recipe};
     pub use sg_dsp::env::AdEnv;
-    pub use sg_dsp::modal::{inharmonic_modes, Mode};
+    pub use sg_dsp::modal::{
+        inharmonic_modes, material, MatMode, Material, Mode, Pickup, ALUMINIUM, BONE, CARDBOARD,
+        CERAMIC, CONCRETE, FLESH, GLASS, GLASS_BOTTLE, OAK, PINE, PLASTIC, STEEL,
+    };
     pub use sg_dsp::noise::NoiseColor;
     pub use sg_dsp::osc::WaveShape;
 }

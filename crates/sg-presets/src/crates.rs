@@ -22,43 +22,15 @@ pub fn presets() -> Vec<Recipe> {
 // material helpers
 // ---------------------------------------------------------------------------
 
-const WOOD_RATIOS: [f32; 5] = [1.0, 2.32, 3.71, 5.14, 6.90];
-const WOOD_MISTUNE: [f32; 5] = [1.0, 1.013, 0.988, 1.007, 0.995];
-const METAL_RATIOS: [f32; 4] = [1.0, 2.756, 5.404, 8.933];
-const METAL_MISTUNE: [f32; 4] = [1.0, 0.986, 1.012, 0.993];
-
-/// Wooden box modes. Higher modes are quieter and die faster.
+/// Wooden box modes, from the oak plank table. `brightness` tilts the top
+/// (0.5 neutral, >0.5 brighter).
 fn wood_modes(base: f32, decay: f32, brightness: f32) -> Vec<Mode> {
-    WOOD_RATIOS
-        .iter()
-        .zip(WOOD_MISTUNE.iter())
-        .enumerate()
-        .map(|(i, (ratio, mist))| {
-            let n = i as f32;
-            Mode::new(
-                base * ratio * mist,
-                (brightness / (1.0 + n * 0.9)).min(1.0),
-                decay / (1.0 + n * 0.45),
-            )
-        })
-        .collect()
+    sg_dsp::modal::OAK.modes_with_t60(base, decay, brightness.clamp(0.0, 1.0))
 }
 
-/// Free-free metal bar modes: bright, inharmonic, long ring.
+/// Steel shell modes: bright, inharmonic, long ring.
 fn metal_modes(base: f32, decay: f32) -> Vec<Mode> {
-    METAL_RATIOS
-        .iter()
-        .zip(METAL_MISTUNE.iter())
-        .enumerate()
-        .map(|(i, (ratio, mist))| {
-            let n = i as f32;
-            Mode::new(
-                base * ratio * mist,
-                (1.0 / (1.0 + n * 1.1)).min(1.0),
-                decay / (1.0 + n * 0.6),
-            )
-        })
-        .collect()
+    sg_dsp::modal::STEEL.modes_with_t60(base, decay, 0.5)
 }
 
 // ---------------------------------------------------------------------------
