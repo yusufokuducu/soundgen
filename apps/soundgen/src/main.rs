@@ -1,4 +1,4 @@
-﻿//! SoundGen — procedural sound-effect generator for a zombie game.
+﻿//! SoundGen — procedural sound-effect generator for arcade and action games.
 //!
 //! A single-window studio: preset browser on the left, the sound itself in the
 //! middle, a layer inspector on the right, a variation family at the bottom and

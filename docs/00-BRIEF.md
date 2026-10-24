@@ -1,12 +1,14 @@
 # SoundGen — Proje Brifingi
 
 ## Amaç
-Bir **zombi oyunu** için ihtiyaç duyulan *tüm* ses efektlerini üreten, dinleyip anında düzenleyebilen,
-profesyonel kalitede bir **prosedürel ses efekt üretim aracı**.
+Bir **arcade / aksiyon oyunu** için ihtiyaç duyulan *tüm* ses efektlerini üreten, dinleyip anında
+düzenleyebilen, profesyonel kalitede bir **prosedürel ses efekt üretim aracı**. İlk sürüm bir
+zombi/aksiyon paketiyle gelir; kapsam ileride tüm arcade türlerine (koşu, nişan, parti, kule
+savunma) genişleyecek şekilde tasarlanmıştır.
 
 ## Kapsam (ses kategorileri)
 - Silah sesleri (ateş, mekanizma, şarjör, kovan, susturucu)
-- Zombi sesleri (hırıltı, çığlık, ısırma, ölüm, kalabalık)
+- Yaratık sesleri (hırıltı, çığlık, ısırma, ölüm, kalabalık)
 - Vurma / isabet / gore (et, kemik, kafa patlaması)
 - Folyo / adım / çevre (rüzgâr, enkaz, kuş, uzak savaş)
 - Pervane / drone / motor döngüleri

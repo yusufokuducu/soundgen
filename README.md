@@ -1,117 +1,132 @@
 # SoundGen
 
-**Zombi oyunları için prosedürel ses efekti stüdyosu.** Örnek dosya kullanmaz: silah sesinden
-konfeti patlamasına, pervane döngüsünden zombi hırıltısına kadar her sesi katmanlı sentezle
-sıfırdan üretir; anında dinletir, düzenletir ve WAV olarak dışa verir.
+**A procedural sound-effect studio for arcade and action games.** No sample library: every sound —
+from a shotgun blast to a confetti pop, from a propeller loop to a creature growl — is synthesised
+from scratch out of layers. Audition it instantly, shape it in real time, export it as WAV.
 
-![SoundGen stüdyo arayüzü](docs/assets/screenshot.png)
+![The SoundGen studio](docs/assets/screenshot.png)
 
 ```
 Rust 1.85+ · egui/eframe 0.37 · cpal 0.18 · Windows (WASAPI)
 ```
 
-## Neden
+## Why
 
-Bir zombi oyununda 300+ ses gerekir ve bunların çoğu birbirinin akrabasıdır. SoundGen bunu
-**parametre + tohum** problemine çevirir:
+An arcade or action game needs hundreds of sounds, and most of them are siblings: thirty weapon
+variants, forty creature vocalisations, twenty footstep surfaces. SoundGen turns that into a
+**parameter + seed** problem:
 
-- **Katman (Layer):** her efekt 2-6 katman — transient, gövde, kuyruk, süs.
-- **Stil ekseni:** `0.0` gerçekçi/fiziksel ↔ `1.0` çizgi film/abartılı.
-- **Aile (Family):** tek ses değil, aynı karakteri paylaşan 8-12 tohumlu varyasyon.
+- **Layer** — every effect is 2–6 stacked layers: transient, body, tail, garnish.
+- **Style axis** — `0.0` physical/realistic ↔ `1.0` cartoon/exaggerated, applied per layer.
+- **Family** — not one sound but 8–12 seeded variations that share a character.
 
-Aynı reçeteden 12 farklı ama tanıdık varyasyon çıkar; birini beğenip yıldızlarsınız ve sadece
-beğendikleriniz dışa aktarılır.
+One recipe yields twelve different but recognisably related takes. Star the ones you like and export
+only those.
 
-## Kütüphane
+## How it works
 
-66 fabrika reçetesi, 9 kategori:
+A sound is a **recipe**: a stack of layers, each with its own generator (noise, tone, modal bank,
+granular cloud, rotor), envelope, filter sweep, gain, pan and delay. The whole recipe renders
+offline in ~18 ms, which is fast enough to re-render on every knob move and still feel instant —
+so there is no real-time DSP graph to glitch, and every audition is exactly what you will export.
 
-| Kategori | Adet | Örnekler |
+The style axis morphs the same layers between two readings: at `0.0` you get tighter damping, more
+inharmonicity and a drier tail; at `1.0` the pitch bends, the modes ring longer and a bit of
+bit-crush creeps in.
+
+## Library
+
+66 factory recipes across 9 categories:
+
+| Category | Count | Examples |
 |---|---|---|
 | Weapons | 10 | pistol, rifle, shotgun, SMG, suppressed, dry fire, reload, casing, bolt, shell |
-| Zombies | 9 | low/high growl, scream, pain hit, lunge, bite, death rattle, idle breath, horde bed |
+| Creatures | 9 | low/high growl, scream, pain hit, lunge, bite, death rattle, idle breath, horde bed |
 | Gore | 8 | flesh hit, slash, bone break, head pop, body fall, blood splat, dismember, crunch |
-| Foley | 8 | footstep ×4 zemin, body land, cloth rustle, door creak, glass debris |
+| Foley | 8 | footstep ×4 surfaces, body land, cloth rustle, door creak, glass debris |
 | Loops | 6 | small/large propeller, drone motor, helicopter, wind, campfire |
-| Crates | 6 | wood, metal, plastic açılış + kırılma varyantları |
+| Crates | 6 | wood, metal, plastic: open and break variants |
 | Celebration | 6 | confetti pop, party horn, crowd cheer, coin, fanfare |
 | UI | 8 | click, hover, confirm, cancel, error, notify, swipe, toggle |
 | Ambience | 5 | wind, cave drip, distant moan, room tone, rain |
 
-Döngüler (`Loops`) tam sayıda pervane geçişine göre ayarlanır ve renderer'ın dairesel
-crossfade'i ile dikişsiz birleşir: ölçülen seam oranı 0.00-0.57 (1.5 eşiği).
+Loops are tuned to a whole number of blade passes and joined by the renderer's circular crossfade,
+so they repeat without a click: measured seam ratio 0.00–0.57 (threshold 1.5).
 
-## Hızlı başlangıç
+## Quick start
 
 ```powershell
-# uygulama
+# the app
 cargo run --release -p soundgen
 
-# dolu varyasyon ailesiyle aç (README ekran görüntüsü / demo)
+# open with a populated variation family (this is how the screenshot was taken)
 cargo run --release -p soundgen -- --demo
 
-# kütüphaneyi listele
+# list the library
 cargo run -p soundgen-cli -- list
 
-# tüm kütüphaneyi 4 varyasyonla WAV olarak dışa ver
+# export the whole library with 4 variations each
 cargo run --release -p soundgen-cli -- render --out out --variations 4 --style 0.35 --bits 16
 
-# sadece silahlar, 24-bit
+# weapons only, 24-bit
 cargo run --release -p soundgen-cli -- render --out out --only weapon --bits 24
 
-# kalite kontrolü (süre / peak / LUFS / NaN)
+# quality control (duration / peak / LUFS / NaN / loop seam)
 cargo run -p soundgen-cli -- stats
 ```
 
-## Klavye kısayolları
+## Keyboard shortcuts
 
-| Tuş | İşlev |
+| Key | Action |
 |---|---|
-| `Space` | çal / durdur |
-| `R` | varyasyon üret (randomize) |
-| `L` | seçili katmanı kilitle (randomize dokunmaz) |
-| `S` / `M` | seçili katmanı solo / mute |
-| `E` | WAV dışa ver |
-| `↑` / `↓` | önceki / sonraki preset |
-| `Ctrl+Z` | geri al (50 adım) |
+| `Space` | play / stop |
+| `R` | randomize into a new variation |
+| `L` | lock the selected layer (randomize leaves it alone) |
+| `S` / `M` | solo / mute the selected layer |
+| `E` | export WAV |
+| `↑` / `↓` | previous / next preset |
+| `Ctrl+Z` | undo (50 steps) |
 
-## Kasa yapısı
+## Workspace layout
 
-| Yol | İçerik |
+| Path | Contents |
 |---|---|
-| `crates/sg-dsp` | RNG, gürültü renkleri, ADSR, TPT SVF, biquad, osilatör, modal bank, efektler |
-| `crates/sg-engine` | `Recipe` / `Layer` modeli, offline renderer, `AudioBuffer` analizi |
-| `crates/sg-presets` | fabrika kütüphanesi (kategori başına bir modül) |
-| `crates/sg-io` | WAV yazımı + cpal çalar |
-| `apps/soundgen` | egui stüdyo arayüzü |
-| `apps/soundgen-cli` | toplu render + QA |
+| `crates/sg-dsp` | RNG, noise colours, envelopes, TPT state-variable filter, biquad, oscillator, modal bank, effects |
+| `crates/sg-engine` | `Recipe` / `Layer` model, offline renderer, `AudioBuffer` analysis |
+| `crates/sg-presets` | the factory library (one module per category) |
+| `crates/sg-io` | WAV writer and cpal player |
+| `apps/soundgen` | the egui studio |
+| `apps/soundgen-cli` | batch render and QA |
 
-## Dokümanlar
+## Docs
 
-- [`docs/00-BRIEF.md`](docs/00-BRIEF.md) — ürün brifingi
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — mimari kararlar ve render hattı
-- [`docs/API-CHEATSHEET.md`](docs/API-CHEATSHEET.md) — preset yazma rehberi
-- [`docs/QA.md`](docs/QA.md) — üretilen seslerin süre / peak / LUFS / seam raporu
-- [`docs/adr/`](docs/adr) — mimari karar kayıtları
-- `docs/research/01-dsp-sentez.md` — sentez teknikleri, kategori reçeteleri, stil haritası
-- `docs/research/02-arac-ux.md` — profesyonel araç teardown'ı, arayüz ve akış
-- `docs/research/03-stack.md` — teknoloji yığını karşılaştırması
-- `docs/research/04-entegrasyon.md` — Unity/FMOD/Wwise sözleşmesi, loudness, isimlendirme
+The research and design notes are written in Turkish; the code and identifiers are English.
 
-## Durum
+- [`docs/00-BRIEF.md`](docs/00-BRIEF.md) — product brief
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architecture decisions and the render pipeline
+- [`docs/API-CHEATSHEET.md`](docs/API-CHEATSHEET.md) — how to write a preset
+- [`docs/QA.md`](docs/QA.md) — measured duration / peak / LUFS / seam report for the exported pack
+- [`docs/adr/`](docs/adr) — architecture decision records
+- `docs/research/01-dsp-sentez.md` — synthesis techniques, per-category recipes, style map
+- `docs/research/02-arac-ux.md` — teardown of professional sound tools, UI and workflow
+- `docs/research/03-stack.md` — technology stack comparison
+- `docs/research/04-entegrasyon.md` — Unity/FMOD/Wwise contract, loudness, naming
 
-- [x] DSP çekirdeği (modal, granüler, rotor, sweep, ton, gürültü)
-- [x] Offline render + düşük gecikmeli oynatma
-- [x] Stil ekseni (gerçekçi ↔ çizgi film)
-- [x] Tohumlu varyasyon ailesi
+## Status
+
+- [x] DSP core (modal, granular, rotor, sweep, tone, noise)
+- [x] Offline render + low-latency playback
+- [x] Style axis (realistic ↔ cartoon)
+- [x] Seeded variation families
 - [x] WAV export (16/24-bit, mono/stereo)
-- [x] Kategori kütüphanesi (silahlar, zombiler, gore, foley, döngüler, kasalar, kutlama, UI, ambiyans)
-- [x] egui stüdyo arayüzü (dalga formu, spektrogram, katman denetçisi, varyasyon ailesi)
-- [x] Dikişsiz döngüler (dairesel crossfade, tam süre)
-- [ ] Fiziksel modelleme v0.2 (temas kuvveti, modal gövde, formant ses)
+- [x] Category library (weapons, creatures, gore, foley, loops, crates, celebration, UI, ambience)
+- [x] egui studio (waveform, spectrogram, layer inspector, variation family)
+- [x] Seamless loops (circular crossfade, exact length)
+- [ ] Physical modelling v0.2 (contact force, modal bodies, formant voices)
+- [ ] Sample layers — drop your own recordings into a recipe
 - [ ] JSON sidecar + Unity Addressables importer
-- [ ] VST3 / runtime kütüphane
+- [ ] VST3 / runtime library
 
-## Lisans
+## License
 
-MIT (kod). Üretilen sesler sizindir.
+MIT for the code. The sounds you generate are yours.
