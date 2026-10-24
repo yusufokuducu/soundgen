@@ -19,6 +19,9 @@ use std::time::Duration;
 use ui::waveform::{peaks_mini, WaveCache};
 
 fn main() -> eframe::Result<()> {
+    // `--demo` opens the app on a curated preset with a populated variation
+    // family: useful for screenshots and for showing the tool off.
+    let demo = std::env::args().any(|a| a == "--demo");
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1480.0, 940.0])
@@ -29,7 +32,7 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "SoundGen",
         options,
-        Box::new(|cc| Ok(Box::new(App::new(cc)))),
+        Box::new(move |cc| Ok(Box::new(App::new(cc, demo)))),
     )
 }
 
@@ -88,7 +91,7 @@ pub struct App {
 }
 
 impl App {
-    fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    fn new(cc: &eframe::CreationContext<'_>, demo: bool) -> Self {
         ui::theme::install(&cc.egui_ctx);
 
         let presets = sg_presets::all();
@@ -143,6 +146,22 @@ impl App {
             app.set_status(format!("Audio unavailable: {err}"), StatusKind::Warn);
         } else {
             app.set_status("Ready - press SPACE to audition", StatusKind::Info);
+        }
+
+        if demo {
+            if let Some(i) = app.presets.iter().position(|r| r.id == "weapon_shotgun_fire") {
+                app.selected = i;
+                app.loop_on = false;
+                app.auto_audition = false;
+                app.selected_layer = app.presets[i].layers.len().min(2) - 1;
+                app.rerender();
+                app.schedule_thumbs();
+                app.generate_variations(12);
+                for v in app.variations.iter_mut().take(3) {
+                    v.kept = true;
+                }
+                app.set_status("Demo - shotgun preset, 12 variations", StatusKind::Good);
+            }
         }
         app
     }
@@ -759,5 +778,47 @@ impl eframe::App for App {
                     .inner_margin(egui::Margin::symmetric(18, 14)),
             )
             .show(root, |ui| ui::panels::editor(self, ui));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The bottom strip is generated headlessly: 12 seeds must render, survive
+    /// the thumbnail pass and write `out/<category>/<id>_vNN.wav` like the UI does.
+    #[test]
+    fn variation_family_renders_and_exports() {
+        let presets = sg_presets::all();
+        let recipe = presets.first().expect("factory library is empty");
+        let target = recipe.render_length();
+
+        let mut family = Vec::new();
+        for i in 0..12u64 {
+            let seed = 1000u64.wrapping_add(i.wrapping_mul(7919));
+            let buf = render(recipe, seed);
+            assert!(buf.frames() > 0, "seed {seed} rendered no frames");
+            assert!(buf.peak() > 1e-3, "seed {seed} rendered silence");
+            let thumb = peaks_mini(&buf, 48, None);
+            assert!(!thumb.is_empty());
+            assert!(buf.lufs_approx().is_finite());
+            family.push(buf);
+        }
+
+        let dir = std::env::temp_dir()
+            .join("soundgen_variation_test")
+            .join(recipe.category.folder());
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        for (i, buf) in family.iter().enumerate() {
+            let path = dir.join(format!("{}_v{:02}.wav", recipe.id, i + 1));
+            write_wav(&path, buf, &ExportOptions::default()).expect("write wav");
+            assert!(path.exists());
+        }
+
+        let mean = family.iter().map(|b| b.duration()).sum::<f32>() / family.len() as f32;
+        assert!(
+            (mean - target).abs() < target * 0.25 + 0.05,
+            "variations drifted from the preset length: {mean:.3}s vs {target:.3}s"
+        );
     }
 }

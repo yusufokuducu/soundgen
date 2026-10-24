@@ -26,9 +26,9 @@ pub const CANVAS: Color32 = Color32::from_rgb(0x0e, 0x10, 0x15);
 /// Primary text.
 pub const TEXT: Color32 = Color32::from_rgb(0xe6, 0xe9, 0xef);
 /// Secondary text.
-pub const MUTED: Color32 = Color32::from_rgb(0x8b, 0x93, 0xa3);
+pub const MUTED: Color32 = Color32::from_rgb(0x9d, 0xa6, 0xb8);
 /// Tertiary text / section labels.
-pub const DIM: Color32 = Color32::from_rgb(0x5c, 0x64, 0x74);
+pub const DIM: Color32 = Color32::from_rgb(0x79, 0x83, 0x9a);
 /// Mint accent: signal, selection, "real".
 pub const ACCENT: Color32 = Color32::from_rgb(0x6e, 0xe7, 0xb7);
 /// Pink accent: cartoon, mute, "stylised".
