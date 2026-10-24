@@ -1,0 +1,35 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/sg-dsp",
+    "crates/sg-engine",
+    "crates/sg-presets",
+    "crates/sg-io",
+    "apps/soundgen",
+    "apps/soundgen-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+
+[workspace.dependencies]
+sg-dsp = { path = "crates/sg-dsp" }
+sg-engine = { path = "crates/sg-engine" }
+sg-presets = { path = "crates/sg-presets" }
+sg-io = { path = "crates/sg-io" }
+anyhow = "1"
+hound = "3.5"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
